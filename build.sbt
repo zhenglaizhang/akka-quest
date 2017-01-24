@@ -1,4 +1,4 @@
-name := "akk-quest"
+name := "akka-quest"
 
 version := "1.0"
 
