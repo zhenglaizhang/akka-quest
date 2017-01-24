@@ -62,7 +62,10 @@ class EchoActor extends Actor with ActorLogging {
 
 class MagicNumberActor(magicNumber: Int) extends Actor with ActorLogging {
 
-  log.info("my_path={}, parent_path={}", self.path, context.parent.path)
+  // import members of context to save keystrokes
+  import context._
+
+  log.info("my_path={}, parent_path={}", self.path, parent.path)
 
   // strategy to supervise childs
   // since failure is communicated as a message sent to the supervisor
