@@ -24,24 +24,46 @@ class EchoActor extends Actor with ActorLogging {
   log.info("children: {}", context.children)
 
   // lifecycle hooks
+  // called when the actor is created
   override def preStart() = {
-    super.preStart()
     log.info("pre starting...")
   }
 
+  // All actors are supervised, i.e. linked to another actor with a fault handling strategy.
+
+  // The old actor is informed by calling preRestart
   override def preRestart(reason: Throwable, message: Option[Any]) = {
+    // This method is the best place for cleaning up, preparing hand-over to the fresh actor instance,
+    // etc. By default it stops all children and calls postStop.
     super.preRestart(reason, message)
     log.error("pre restarting, reason={}, message={}", reason, message)
   }
 
+  // The initial factory from the actorOf call is used to produce the fresh instance.
+
+  // The new actor’s postRestart method is invoked with the exception which caused the restart.
+  // By default the preStart is called, just as in the normal start-up case.
   override def postRestart(reason: Throwable) = {
-    super.postRestart(reason)
+    super.postRestart(reason) // call preStart() by default
     log.error("post restarting, reason={}", reason)
   }
 
+  /*
+  An actor restart replaces only the actual actor object;
+  the contents of the mailbox is unaffected by the restart, so processing of messages will resume after the postRestart hook returns.
+  The message that triggered the exception will not be received again.
+  Any message sent to an actor while it is being restarted will be queued to its mailbox as usual.
+
+   the ordering of failure notifications relative to user messages is not deterministic.
+   In particular, a parent might restart its child before it has processed the last messages sent by the child before the failure.
+   */
+
   // called async after actor.stop() is called
   override def postStop() = {
-    log.info("good bye...")
+    //  for deregistering this actor from other services.
+    // This hook is guaranteed to run after message queuing has been disabled for this actor,
+    // i.e. messages sent to a stopped actor will be redirected to the deadLetters of the ActorSystem.
+    log.info("good bye, message queuing must be disabled...")
   }
 
   def receive: Actor.Receive = {

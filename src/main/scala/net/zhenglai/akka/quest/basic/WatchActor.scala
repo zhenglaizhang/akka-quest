@@ -7,7 +7,10 @@ class WatchActor(target: ActorRef) extends Actor with ActorLogging {
   context.watch(target) // lifecycle monitoring aka DeathWatch registration
   // context.unwatch(child)
 
+  // Terminated message is generated independent of the order in which registration and termination occur
   // registering for monitoring of an already terminated actor leads to the immediate generation of the Terminated message.
+  // Registering multiple times does not necessarily lead to multiple messages being generated,
+  // but there is no guarantee that only exactly one such message is received
   var lastSender = context.system.deadLetters
 
   override def receive = {
