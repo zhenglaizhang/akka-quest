@@ -1,10 +1,13 @@
 package net.zhenglai.akka.quest.basic
 
+import java.util.concurrent.TimeUnit
+
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 import akka.actor.{ ActorSystem, PoisonPill, Props }
 import akka.typed.Inbox
+import akka.util.Timeout
 import net.zhenglai.akka.quest.basic.MagicNumberActor.{ Goodbye, Greeting }
 
 object EchoActorMain {
@@ -42,6 +45,10 @@ object EchoActorMain {
 
     val theActor = system.actorSelection("/user/magicActorOut")
     theActor ! -100
+
+    implicit val timeout = Timeout(100, TimeUnit.MILLISECONDS)
+    import scala.concurrent.ExecutionContext.Implicits.global
+    theActor.resolveOne().map(_ ! -200)
     // There is an implicit conversion from inbox to actor reference which means that in this example the sender reference will be that of the actor hidden away within the inbox
 
     // TODO: http://doc.akka.io/docs/akka/2.4/scala/actors.html#Forward_message
