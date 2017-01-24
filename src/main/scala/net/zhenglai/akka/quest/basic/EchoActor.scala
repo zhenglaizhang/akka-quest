@@ -1,6 +1,6 @@
 package net.zhenglai.akka.quest.basic
 
-import akka.actor.{ Actor, ActorLogging, Props }
+import akka.actor.{ Actor, ActorLogging, PoisonPill, Props }
 import net.zhenglai.akka.quest.basic.MagicNumberActor.{ Goodbye, Greeting }
 
 /*
@@ -39,14 +39,14 @@ class EchoActor extends Actor with ActorLogging {
 
   // called async after actor.stop() is called
   override def postStop() = {
-    super.postStop()
-    log.error("post stopping...")
+    log.info("good bye...")
   }
 
   def receive: Actor.Receive = {
     case "ping" => log.info("received ping")
     case Greeting(greeter) => log.info("greeted by {}", greeter)
-    case Goodbye => log.info("good bye...")
+    case Goodbye =>
+      child ! PoisonPill
     case num: Int =>
       // child.forward(num)
       log.info("received num:{}", num)
@@ -63,6 +63,10 @@ class MagicNumberActor(magicNumber: Int) extends Actor with ActorLogging {
     case num: Int =>
       log.info("received num: {}", num)
       sender() ! (num + magicNumber)
+  }
+
+  override def postStop() = {
+    log.info("good bye...")
   }
 }
 
