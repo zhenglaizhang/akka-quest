@@ -25,6 +25,7 @@ object EchoActorMain {
     // The ActorRef is immutable and has a one to one relationship with the Actor it represents.
     // The ActorRef is also serializable and network-aware.
 
+    actor ! "unknown"
     actor ! "ping"
     actor ! Greeting("Zhenglai")
     actor ! 0
@@ -34,6 +35,7 @@ object EchoActorMain {
     // the ask pattern can be a solution
 
     val magicActorOut = system.actorOf(MagicNumberActor.props(9999), "magicActorOut")
+    magicActorOut ! "unhandled"
     // There is an implicit conversion from inbox to actor reference which means that in this example the sender reference will be that of the actor hidden away within the inbox
 
     // TODO: http://doc.akka.io/docs/akka/2.4/scala/actors.html#Forward_message

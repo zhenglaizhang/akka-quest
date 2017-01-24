@@ -21,6 +21,8 @@ class EchoActor extends Actor with ActorLogging {
   // [akka://mySystem/user/echoActor/magicNumber]
   val child = context.actorOf(MagicNumberActor.props(1), "magicNumber")
 
+  log.info("children: {}", context.children)
+
   // lifecycle hooks
   override def preStart() = {
     super.preStart()
@@ -59,12 +61,26 @@ class EchoActor extends Actor with ActorLogging {
 
 
 class MagicNumberActor(magicNumber: Int) extends Actor with ActorLogging {
+
+  log.info("my_path={}, parent_path={}", self.path, context.parent.path)
+
+  // strategy to supervise childs
+  // since failure is communicated as a message sent to the supervisor
+  // and processed like other messages (albeit outside of the normal behavior),
+  override def supervisorStrategy = super.supervisorStrategy
+
+  // behavior of the actor
   def receive = {
     case num: Int =>
       log.info("received num: {}", num)
       if (num >= 999) {
+        // sender() refs sender actor of the last received message
         sender() ! (num + magicNumber)
       }
+  }
+
+  override def unhandled(message: Any) = {
+    log.info("unhandled message caught: {}", message)
   }
 
   override def postStop() = {
