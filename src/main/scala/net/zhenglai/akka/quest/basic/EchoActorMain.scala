@@ -14,15 +14,16 @@ object EchoActorMain {
     // top level actor
     // supervised by the actor system's provided guardian actor
     // return ActorRef: handle to the actor instance & the only way to interact with it
+    // [akka://mySystem/user/echoActor]
     val actor = system.actorOf(Props[EchoActor], "echoActor")
 
     actor ! "ping"
     actor ! Greeting("Zhenglai")
-    actor ! 12
+    actor ! 0
     actor ! Goodbye
 
     // TODO: how to terminate actor system gracefully
-    Thread.sleep(10 * 1000)
+    Thread.sleep(1 * 1000)
     system.terminate()
     Await.ready(system.whenTerminated, 10.seconds)
   }

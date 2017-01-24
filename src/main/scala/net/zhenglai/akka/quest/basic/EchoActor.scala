@@ -18,8 +18,8 @@ class EchoActor extends Actor with ActorLogging {
   // create new child actor
   // It is recommended to create a hierarchy of children, grand-children
   // and so on such that it fits the logical failure-handling structure of the application,
-  val child = context.actorOf(MagicNumberActor.props(42), "magicNumber")
-
+  // [akka://mySystem/user/echoActor/magicNumber]
+  val child = context.actorOf(MagicNumberActor.props(1), "magicNumber")
 
   // lifecycle hooks
   override def preStart() = {
@@ -47,7 +47,10 @@ class EchoActor extends Actor with ActorLogging {
     case "ping" => log.info("received ping")
     case Greeting(greeter) => log.info("greeted by {}", greeter)
     case Goodbye => log.info("good bye...")
-    case num: Int => child.forward(num)
+    case num: Int =>
+      // child.forward(num)
+      log.info("received num:{}", num)
+      child ! num
     case _ => log.info("received unknown message")
   }
 
@@ -57,7 +60,9 @@ class EchoActor extends Actor with ActorLogging {
 
 class MagicNumberActor(magicNumber: Int) extends Actor with ActorLogging {
   def receive = {
-    case x: Int => log.info("received num: {}", x)
+    case num: Int =>
+      log.info("received num: {}", num)
+      sender() ! (num + magicNumber)
   }
 }
 
