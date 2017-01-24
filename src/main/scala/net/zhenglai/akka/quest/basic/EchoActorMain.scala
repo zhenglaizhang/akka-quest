@@ -22,6 +22,8 @@ object EchoActorMain {
     // supervised by the actor system's provided guardian actor
     // return ActorRef: handle to the actor instance & the only way to interact with it
     // Actors are automatically started asynchronously when created.
+    // root guardian (which is the parent of "/user")
+    // the .. in actor paths here always means the logical structure, i.e. the supervisor.
     // [akka://mySystem/user/echoActor]
     val actor = system.actorOf(Props[EchoActor], "echoActor")
 
@@ -43,19 +45,37 @@ object EchoActorMain {
     val magicActorOut = system.actorOf(MagicNumberActor.props(9999), "magicActorOut")
     magicActorOut ! "unhandled"
 
+    /*
+    It is always preferable to communicate with other Actors using their ActorRef instead of relying upon ActorSelection. Exceptions are
+
+sending messages using the At-Least-Once Delivery facility
+initiating first contact with a remote system
+In all other cases ActorRefs can be provided during Actor creation or initialization, passing them from parent to child or introducing Actors by sending their ActorRefs to other Actors within messages.
+
+      // will look up all siblings beneath same supervisor
+     */
+    //    context.actorSelection("../*")
+
     val theActor = system.actorSelection("/user/magicActorOut")
     theActor ! -100
 
+
+    val ghost = system.actorSelection("/user/ghost")
+    ghost ! "wow" // should be dropped & sent to dead letters
+
+    val followerActor = system.actorOf(FollowerActor.props)
+
     implicit val timeout = Timeout(100, TimeUnit.MILLISECONDS)
     import scala.concurrent.ExecutionContext.Implicits.global
+    // ActorNotFound if failure or identification times out
     theActor.resolveOne().map(_ ! -200)
     // There is an implicit conversion from inbox to actor reference which means that in this example the sender reference will be that of the actor hidden away within the inbox
 
     // TODO: http://doc.akka.io/docs/akka/2.4/scala/actors.html#Forward_message
-//    implicit val inbox = new Inbox[Int]("inbox")
-//    magicActorOut ! 1
-//    Thread.sleep(1 * 1000)
-//    require(inbox.receiveMsg() == 10000)
+    //    implicit val inbox = new Inbox[Int]("inbox")
+    //    magicActorOut ! 1
+    //    Thread.sleep(1 * 1000)
+    //    require(inbox.receiveMsg() == 10000)
     actor ! PoisonPill
 
     actor ! Goodbye
