@@ -30,12 +30,18 @@ object EchoActorMain {
     actor ! Greeting("Zhenglai")
     actor ! 0
 
+    // It is important to note that Actors do not stop automatically when no longer referenced, every Actor that is created must also explicitly be destroyed.
+    // The only simplification is that stopping a parent Actor will also recursively stop all the child Actors that this parent has created.
+
 
     // When writing code outside of actors which shall communicate with actors,
     // the ask pattern can be a solution
 
     val magicActorOut = system.actorOf(MagicNumberActor.props(9999), "magicActorOut")
     magicActorOut ! "unhandled"
+
+    val theActor = system.actorSelection("/user/magicActorOut")
+    theActor ! -100
     // There is an implicit conversion from inbox to actor reference which means that in this example the sender reference will be that of the actor hidden away within the inbox
 
     // TODO: http://doc.akka.io/docs/akka/2.4/scala/actors.html#Forward_message
