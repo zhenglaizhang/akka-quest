@@ -4,6 +4,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 import akka.actor.{ ActorSystem, PoisonPill, Props }
+import akka.typed.Inbox
 import net.zhenglai.akka.quest.basic.MagicNumberActor.{ Goodbye, Greeting }
 
 object EchoActorMain {
@@ -17,6 +18,7 @@ object EchoActorMain {
     // top level actor
     // supervised by the actor system's provided guardian actor
     // return ActorRef: handle to the actor instance & the only way to interact with it
+    // Actors are automatically started asynchronously when created.
     // [akka://mySystem/user/echoActor]
     val actor = system.actorOf(Props[EchoActor], "echoActor")
 
@@ -27,7 +29,18 @@ object EchoActorMain {
     actor ! Greeting("Zhenglai")
     actor ! 0
 
-    Thread.sleep(1 * 10)
+
+    // When writing code outside of actors which shall communicate with actors,
+    // the ask pattern can be a solution
+
+    val magicActorOut = system.actorOf(MagicNumberActor.props(9999), "magicActorOut")
+    // There is an implicit conversion from inbox to actor reference which means that in this example the sender reference will be that of the actor hidden away within the inbox
+
+    // TODO: http://doc.akka.io/docs/akka/2.4/scala/actors.html#Forward_message
+//    implicit val inbox = new Inbox[Int]("inbox")
+//    magicActorOut ! 1
+//    Thread.sleep(1 * 1000)
+//    require(inbox.receiveMsg() == 10000)
     actor ! PoisonPill
 
     actor ! Goodbye
@@ -36,5 +49,4 @@ object EchoActorMain {
     system.terminate()
     Await.ready(system.whenTerminated, 10.seconds)
   }
-
 }

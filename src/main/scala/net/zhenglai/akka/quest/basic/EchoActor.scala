@@ -8,7 +8,7 @@ Akka enforces parental supervision every actor is supervised and (potentially) t
  */
 class EchoActor extends Actor with ActorLogging {
 
-//  val log = Logging(context.system, this)
+  //  val log = Logging(context.system, this)
 
   // PartialFunction[Any, Unit]
   // message loop is exhaustive, otherwise UnhandledMessage(msg, sender, recipient) will be published to the ActorSystem's EventStream
@@ -62,7 +62,9 @@ class MagicNumberActor(magicNumber: Int) extends Actor with ActorLogging {
   def receive = {
     case num: Int =>
       log.info("received num: {}", num)
-      sender() ! (num + magicNumber)
+      if (num >= 999) {
+        sender() ! (num + magicNumber)
+      }
   }
 
   override def postStop() = {
@@ -71,8 +73,10 @@ class MagicNumberActor(magicNumber: Int) extends Actor with ActorLogging {
 }
 
 object MagicNumberActor {
+
   // Another good practice is to declare what messages an Actor can receive in the companion object of the Actor
   case class Greeting(from: String)
+
   case object Goodbye
 
   // Props: configuration class to specify options for the creation of actors
