@@ -6,9 +6,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 import akka.actor.{ ActorSystem, PoisonPill, Props }
-import akka.typed.Inbox
 import akka.util.Timeout
 import net.zhenglai.akka.quest.basic.MagicNumberActor.{ Goodbye, Greeting }
+
 
 object EchoActorMain {
 
@@ -60,6 +60,10 @@ object EchoActorMain {
 
     actor ! Goodbye
     Thread.sleep(1 * 1000)
+
+    val watchActor = system.actorOf(WatchActor.props(actor))
+    Thread.sleep(200)
+
     // TODO: how to terminate actor system gracefully
     system.terminate()
     Await.ready(system.whenTerminated, 10.seconds)
