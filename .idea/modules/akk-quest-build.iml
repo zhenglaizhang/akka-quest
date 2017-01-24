@@ -136,6 +136,7 @@
           <root url="jar://$USER_HOME$/.coursier/cache/v1/https/repo.typesafe.com/typesafe/ivy-releases/org.scala-sbt/testing/0.13.13/srcs/testing-sources.jar!/" />
           <root url="jar://$USER_HOME$/.coursier/cache/v1/https/repo.typesafe.com/typesafe/ivy-releases/org.scala-sbt/tracking/0.13.13/srcs/tracking-sources.jar!/" />
           <root url="jar://$USER_HOME$/.coursier/cache/v1/https/repo.typesafe.com/typesafe/ivy-releases/org.scala-tools.sbinary/sbinary_2.10/0.4.2/srcs/sbinary_2.10-sources.jar!/" />
+          <root url="jar://$USER_HOME$/.coursier/cache/v1/https/repo.typesafe.com/typesafe/ivy-releases/org.scala-sbt/main/0.13.13/srcs/main-sources.jar!/" />
         </SOURCES>
       </library>
     </orderEntry>
