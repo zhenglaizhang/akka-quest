@@ -31,6 +31,7 @@ class Manager extends Actor with ActorLogging {
   def shuttingDown: Receive = {
     case "job" => sender() ! "Service Unavailable, shutting down"
     case Terminated(`worker`) =>
+      log.info("terminated msg got")
       context stop self
   }
 }
@@ -53,12 +54,8 @@ object GracefulStopMain extends App {
 
     Future {Iterator.range(0, 5).foreach { _ => manager ! "job" }}
     val stopped: Future[Boolean] = gracefulStop(manager, 5 seconds, Manager.Shutdown)
-    Future
-      .sequence(Iterator
-        .range(0, 5)
-        .map { _ => manager ? "job" }
-      )
-      .foreach(system.log.info("job?: {}", _))
+    val r = Await.result(Future.sequence(Iterator.range(0, 5).map { _ => manager ? "job" }), 2 seconds)
+    system.log.warning("service unavailable?: {}", r.toList)
     system.log.info("graceful stopping result: {}", Await.result(stopped, 6 seconds))
   } catch {
     case e: akka.pattern.AskTimeoutException =>
