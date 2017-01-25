@@ -77,7 +77,7 @@ class EchoActor extends Actor with ActorLogging {
       // child.forward(num)
       log.info("received num:{}", num)
       child ! num
-    case _ => log.info("received unknown message")
+    case unknown => log.info("received unknown message: {}", unknown)
   }
 
   // akka.actor.UnhandledMessage(message, sender, recipient) will be published to the ActorSystem's EventStream.

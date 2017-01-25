@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 
 import akka.actor.{ ActorSystem, PoisonPill, Props }
 import akka.event.Logging
-import akka.pattern.ask
+import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import net.zhenglai.akka.quest.basic.MagicNumberActor.{ Goodbye, Greeting }
 
@@ -43,6 +43,8 @@ object EchoActorMain {
     actor ! "unknown"
 
     // The actor that’s called should send a reply back using the ! method,
+    // The ask operation involves creating an internal actor for handling this reply,
+    // which needs to have a timeout after which it is destroyed in order not to leak resources; see more below.
     val f = actor ? "ping"
     // [EchoActorMain$(akka://mySystem)] response of ask ping: pong
     log.info(s"1st response of ask ping: ${Await.result(f, timeout.duration).asInstanceOf[String]}")
@@ -51,8 +53,14 @@ object EchoActorMain {
     // When you need to perform work like this, the mantra is, “Delegate, delegate, delegate.”
     val f2 = (actor ? "ping").mapTo[String]
     log.info(s"2nd response of ask ping: ${Await.result(f2, timeout.duration)}")
+    // install onComplete handler
+    f2.pipeTo(actor)
 
 
+    // tell => fire and forget
+    //  No blocking waiting for a message.
+    // This gives the best concurrency and scalability characteristics.
+    // If invoked from within an Actor, then the sending actor reference will be implicitly passed along with the message
     actor ! Greeting("Zhenglai")
     actor ! 0
 
