@@ -1,14 +1,12 @@
 package net.zhenglai.akka.quest.basic
 
-import java.util.concurrent.TimeUnit
-
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 import akka.actor.{ ActorSystem, PoisonPill, Props }
 import akka.event.Logging
-import akka.util.Timeout
 import akka.pattern.ask
+import akka.util.Timeout
 import net.zhenglai.akka.quest.basic.MagicNumberActor.{ Goodbye, Greeting }
 
 
@@ -17,9 +15,9 @@ object EchoActorMain {
   def main(args: Array[String]): Unit = {
     val system = ActorSystem("mySystem")
 
-    val log = Logging(system, this)
-    implicit val timeout = Timeout(10000, TimeUnit.MILLISECONDS)
-    import scala.concurrent.ExecutionContext.Implicits.global
+    val log = Logging(system, getClass)
+    implicit val timeout = Timeout(1 second)
+    implicit val ec = system.dispatcher
     // Actors are created by passing a Props instance into the actorOf factory method
     // which is available on ActorSystem and ActorContext.
 
@@ -30,7 +28,7 @@ object EchoActorMain {
     // root guardian (which is the parent of "/user")
     // the .. in actor paths here always means the logical structure, i.e. the supervisor.
     // [akka://mySystem/user/echoActor]
-    val actor = system.actorOf(Props[EchoActor], "echoActor")
+    val actor = system.actorOf(Props[EchoActor], name = "echoActor")
 
     // The ActorRef is immutable and has a one to one relationship with the Actor it represents.
     // The ActorRef is also serializable and network-aware.
@@ -46,7 +44,13 @@ object EchoActorMain {
 
     // The actor that’s called should send a reply back using the ! method,
     val f = actor ? "ping"
-    log.info(s"response of ask ping: ${Await.result(f, timeout.duration)}")
+    // [EchoActorMain$(akka://mySystem)] response of ask ping: pong
+    log.info(s"1st response of ask ping: ${Await.result(f, timeout.duration).asInstanceOf[String]}")
+
+    val f2 = (actor ? "ping").mapTo[String]
+    log.info(s"2nd response of ask ping: ${Await.result(f2, timeout.duration)}")
+
+
     actor ! Greeting("Zhenglai")
     actor ! 0
 
