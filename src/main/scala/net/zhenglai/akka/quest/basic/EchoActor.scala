@@ -67,7 +67,9 @@ class EchoActor extends Actor with ActorLogging {
   }
 
   def receive: Actor.Receive = {
-    case "ping" => log.info("received ping")
+    case "ping" =>
+      log.info("received ping")
+      sender() ! "pong"
     case Greeting(greeter) => log.info("greeted by {}", greeter)
     case Goodbye =>
       child ! PoisonPill
@@ -116,6 +118,10 @@ class MagicNumberActor(magicNumber: Int) extends Actor with ActorLogging {
 object MagicNumberActor {
 
   // Another good practice is to declare what messages an Actor can receive in the companion object of the Actor
+  //  Messages can be any kind of object but have to be immutable. Scala can’t enforce immutability (yet) so this has to be by convention.
+  // Primitives like String, Int, Boolean are always immutable.
+  // Apart from these the recommended approach is to use Scala case classes which are immutable
+  // (if you don’t explicitly expose the state) and works great with pattern matching at the receiver side.
   case class Greeting(from: String)
 
   case object Goodbye

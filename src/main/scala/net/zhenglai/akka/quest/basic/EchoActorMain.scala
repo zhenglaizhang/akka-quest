@@ -6,7 +6,9 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 import akka.actor.{ ActorSystem, PoisonPill, Props }
+import akka.event.Logging
 import akka.util.Timeout
+import akka.pattern.ask
 import net.zhenglai.akka.quest.basic.MagicNumberActor.{ Goodbye, Greeting }
 
 
@@ -15,6 +17,9 @@ object EchoActorMain {
   def main(args: Array[String]): Unit = {
     val system = ActorSystem("mySystem")
 
+    val log = Logging(system, this)
+    implicit val timeout = Timeout(10000, TimeUnit.MILLISECONDS)
+    import scala.concurrent.ExecutionContext.Implicits.global
     // Actors are created by passing a Props instance into the actorOf factory method
     // which is available on ActorSystem and ActorContext.
 
@@ -30,8 +35,18 @@ object EchoActorMain {
     // The ActorRef is immutable and has a one to one relationship with the Actor it represents.
     // The ActorRef is also serializable and network-aware.
 
+
+    // ! means “fire-and-forget”, e.g. send a message asynchronously and return immediately. Also known as tell.
+    // ? sends a message asynchronously and returns a Future representing a possible reply. Also known as ask
+    //  performance implications of using ask since something needs to keep track of when it times out,
+    // there needs to be something that bridges a Promise into an ActorRef and it also needs to be reachable through remoting.
+    // So always prefer tell for performance, and only ask if you must.
+    // Message ordering is guaranteed on a per-sender basis.
     actor ! "unknown"
-    actor ! "ping"
+
+    // The actor that’s called should send a reply back using the ! method,
+    val f = actor ? "ping"
+    log.info(s"response of ask ping: ${Await.result(f, timeout.duration)}")
     actor ! Greeting("Zhenglai")
     actor ! 0
 
@@ -48,8 +63,8 @@ object EchoActorMain {
     /*
     It is always preferable to communicate with other Actors using their ActorRef instead of relying upon ActorSelection. Exceptions are
 
-sending messages using the At-Least-Once Delivery facility
-initiating first contact with a remote system
+      * sending messages using the At-Least-Once Delivery facility
+      * initiating first contact with a remote system
 In all other cases ActorRefs can be provided during Actor creation or initialization, passing them from parent to child or introducing Actors by sending their ActorRefs to other Actors within messages.
 
       // will look up all siblings beneath same supervisor
@@ -63,10 +78,11 @@ In all other cases ActorRefs can be provided during Actor creation or initializa
     val ghost = system.actorSelection("/user/ghost")
     ghost ! "wow" // should be dropped & sent to dead letters
 
+    // remote actor address lookup
+    // context.actorSelection("akka.tcp://app@otherhost:1234/user/serviceB")
+
     val followerActor = system.actorOf(FollowerActor.props)
 
-    implicit val timeout = Timeout(100, TimeUnit.MILLISECONDS)
-    import scala.concurrent.ExecutionContext.Implicits.global
     // ActorNotFound if failure or identification times out
     theActor.resolveOne().map(_ ! -200)
     // There is an implicit conversion from inbox to actor reference which means that in this example the sender reference will be that of the actor hidden away within the inbox
