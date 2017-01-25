@@ -66,13 +66,27 @@ class EchoActor extends Actor with ActorLogging {
     log.info("good bye, message queuing must be disabled...")
   }
 
+  def ops() = throw new RuntimeException("oops...")
+
   def receive: Actor.Receive = {
     case "ping" =>
       log.info("received ping")
       sender() ! "pong"
+    case "pong" =>
+      try {
+        val result = ops()
+        sender() ! result
+      } catch {
+        case e: Exception =>
+          log.error(e, "ops throws error: sending back failure...")
+          sender() ! akka.actor.Status.Failure(e)
+//          throw e
+      }
     case Greeting(greeter) => log.info("greeted by {}", greeter)
     case Goodbye =>
-      child ! PoisonPill
+      //  the original sender address/reference is maintained even though the message is going through a 'mediator'.
+      // This can be useful when writing actors that work as routers, load-balancers, replicators etc.
+      child forward PoisonPill
     case num: Int =>
       // child.forward(num)
       log.info("received num:{}", num)

@@ -52,12 +52,19 @@ object EchoActorMain {
 
     // When you need to perform work like this, the mantra is, “Delegate, delegate, delegate.”
     val f2 = (actor ? "ping").mapTo[String]
-    log.info(s"2nd response of ask ping: ${Await.result(f2, timeout.duration)}")
+    log.info(s"2nd response of ask ping: ${Await.result(f2, timeout.duration)}") // blocking
     // install onComplete handler
-    f2.pipeTo(actor)
+    // non-blocking
+
+    // When using future callbacks, such as onComplete, onSuccess, and onFailure, inside actors you need to carefully avoid closing over the containing actor’s reference,
+    // i.e. do not call methods or access mutable state on the enclosing actor from within the callback.
+    // This would break the actor encapsulation and may introduce synchronization bugs and race conditions because the callback will be scheduled concurrently to the enclosing actor.
+    val failure = Await.result(f2.pipeTo(actor), timeout.duration)
+    log.info("failure message: {}", failure)
     f2 pipeTo actor
     pipe(f) to actor
 
+    Thread.sleep(1000)
 
     // tell => fire and forget
     //  No blocking waiting for a message.
