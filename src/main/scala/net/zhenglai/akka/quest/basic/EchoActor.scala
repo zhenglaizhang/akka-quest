@@ -2,11 +2,16 @@ package net.zhenglai.akka.quest.basic
 
 import akka.actor.{ Actor, ActorLogging, PoisonPill, Props }
 import net.zhenglai.akka.quest.basic.MagicNumberActor.{ Goodbye, Greeting }
+import scala.concurrent.duration._
+
+import akka.typed.patterns.Receiver.ReceiveTimeout
 
 /*
 Akka enforces parental supervision every actor is supervised and (potentially) the supervisor of its children
  */
 class EchoActor extends Actor with ActorLogging {
+
+  context.setReceiveTimeout(30 milliseconds)
 
   //  val log = Logging(context.system, this)
 
@@ -71,6 +76,8 @@ class EchoActor extends Actor with ActorLogging {
   def receive: Actor.Receive = {
     case "ping" =>
       log.info("received ping")
+
+      // If there is no sender (a message was sent without an actor or future context) then the sender defaults to a 'dead-letter' actor ref.
       sender() ! "pong"
     case "pong" =>
       try {
@@ -83,6 +90,12 @@ class EchoActor extends Actor with ActorLogging {
 //          throw e
       }
     case Greeting(greeter) => log.info("greeted by {}", greeter)
+    case "timeout" =>
+      context.setReceiveTimeout(100 milliseconds)
+    case ReceiveTimeout =>
+      // turn it off
+      log.warning("receive timeout...")
+      context.setReceiveTimeout(Duration.Undefined)
     case Goodbye =>
       //  the original sender address/reference is maintained even though the message is going through a 'mediator'.
       // This can be useful when writing actors that work as routers, load-balancers, replicators etc.
