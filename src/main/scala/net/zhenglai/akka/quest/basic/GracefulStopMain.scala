@@ -24,7 +24,6 @@ class Manager extends Actor with ActorLogging {
     case "job" => worker ! "crunch"
     case Shutdown =>
       worker ! PoisonPill
-      // todo: repro the path
       context become shuttingDown
   }
 
@@ -50,6 +49,10 @@ object GracefulStopMain extends App {
   implicit val timeout = Timeout(10 seconds)
   // When gracefulStop() returns successfully, the actor’s postStop() hook will have been executed:
   // there exists a happens-before edge between the end of postStop() and the return of gracefulStop().
+
+  // Keep in mind that an actor stopping and its name being deregistered are separate events which happen asynchronously from each other.
+  // Therefore it may be that you will find the name still in use after gracefulStop() returned.
+  // In order to guarantee proper deregistration, only reuse names from within a supervisor you control and only in response to a Terminated message, i.e. not for top-level actors.
   try {
 
     Future {Iterator.range(0, 5).foreach { _ => manager ! "job" }}
