@@ -47,6 +47,8 @@ object EchoActorMain {
     // [EchoActorMain$(akka://mySystem)] response of ask ping: pong
     log.info(s"1st response of ask ping: ${Await.result(f, timeout.duration).asInstanceOf[String]}")
 
+
+    // When you need to perform work like this, the mantra is, “Delegate, delegate, delegate.”
     val f2 = (actor ? "ping").mapTo[String]
     log.info(s"2nd response of ask ping: ${Await.result(f2, timeout.duration)}")
 
