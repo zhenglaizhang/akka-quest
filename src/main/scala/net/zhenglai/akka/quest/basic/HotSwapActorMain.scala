@@ -29,6 +29,7 @@ class Swapper extends Actor with ActorLogging {
 
   import context._
 
+  // todo: https://github.com/akka/akka/blob/v2.4.16/akka-docs/rst/scala/code/docs/actor/UnnestedReceives.scala
   override def receive = {
     case Swap =>
       log.info("Hi")
