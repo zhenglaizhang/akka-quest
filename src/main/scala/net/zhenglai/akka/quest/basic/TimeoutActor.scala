@@ -1,7 +1,8 @@
 package net.zhenglai.akka.quest.basic
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, InvalidActorNameException, PoisonPill, Props, ReceiveTimeout, Terminated }
 import scala.concurrent.duration._
+
+import akka.actor.{ Actor, ActorLogging, ActorRef, ActorSystem, InvalidActorNameException, Props, ReceiveTimeout, Terminated }
 
 // TODO: more...
 class TimeoutActor extends Actor with ActorLogging {
@@ -67,7 +68,6 @@ object ReceiveTimeoutActorMain extends App {
   actor ! "done"
 
   Thread.sleep(1000)
-
 
   system.terminate()
 }
