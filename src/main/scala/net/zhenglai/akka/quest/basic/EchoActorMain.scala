@@ -55,6 +55,8 @@ object EchoActorMain {
     log.info(s"2nd response of ask ping: ${Await.result(f2, timeout.duration)}")
     // install onComplete handler
     f2.pipeTo(actor)
+    f2 pipeTo actor
+    pipe(f) to actor
 
 
     // tell => fire and forget
