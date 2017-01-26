@@ -13,6 +13,7 @@ trait ConsumerBehavior {
   this: Actor with ActorLogging =>
   val consumerBehavior: Receive = {
     case ref: ActorRef =>
+      // warning: actually, the ref might be un-initialized
       ref ! GiveMeThings
     case Give(thing) =>
       log.info("received: {}", thing)

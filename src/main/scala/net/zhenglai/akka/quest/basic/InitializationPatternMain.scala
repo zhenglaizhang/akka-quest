@@ -17,7 +17,7 @@ class ParentActor extends Actor with ActorLogging {
 
   @scala.throws[Exception](classOf[Exception])
   override def preStart() = {
-    // initialize childern actors
+    // initialize children actors
   }
 
   // Overriding postRestart to disable the call to preStart()
@@ -54,6 +54,13 @@ class WowActor extends Actor with ActorLogging {
     case "U OK?" => initializeMe foreach {sender() ! _}
   }
 }
+
+// If the actor may receive messages before it has been initialized, a useful tool can be the Stash to save messages until the initialization finishes, and replaying them after the actor became initialized.
+
+// Warning
+//This pattern should be used with care, and applied only when none of the patterns above are applicable.
+// One of the potential issues is that messages might be lost when sent to remote actors.
+// Also, publishing an ActorRef in an uninitialized state might lead to the condition that it receives a user message before the initialization has been done.
 
 class StarterActor extends Actor with ActorLogging {
   val wow = context.actorOf(Props[WowActor], "wow")
