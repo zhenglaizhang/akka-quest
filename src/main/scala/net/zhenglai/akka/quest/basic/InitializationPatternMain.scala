@@ -1,6 +1,6 @@
 package net.zhenglai.akka.quest.basic
 
-import akka.actor.{ Actor, ActorLogging }
+import akka.actor.{ Actor, ActorLogging, ActorSystem, Props }
 
 
 // During the lifetime of an ActorRef, an actor can potentially go through several restarts, where the old instance is replaced by a fresh one, invisibly to the outside observer who only sees the ActorRef.
@@ -11,6 +11,7 @@ import akka.actor.{ Actor, ActorLogging }
 //    The method preStart() of an actor is only called once directly during the initialization of the first instance, that is, at creation of its ActorRef.
 //    In the case of restarts, preStart() is called from postRestart(), therefore if not overridden, preStart() is called on every incarnation. 
 //    However, by overriding postRestart() one can disable this behavior, and ensure that there is only one call to preStart().
+//  3. init via message passing
 
 class ParentActor extends Actor with ActorLogging {
 
@@ -38,6 +39,43 @@ class ParentActor extends Actor with ActorLogging {
   override def receive = ???
 }
 
-object InitializationPatternMain extends App {
 
+class WowActor extends Actor with ActorLogging {
+  private[this] var initializeMe: Option[String] = None
+
+  override def receive = {
+    case "init" =>
+      initializeMe = Some("Up and running")
+      sender() ! "starting"
+      context.become(initialized, discardOld = true)
+  }
+
+  def initialized: Receive = {
+    case "U OK?" => initializeMe foreach {sender() ! _}
+  }
+}
+
+class StarterActor extends Actor with ActorLogging {
+  val wow = context.actorOf(Props[WowActor], "wow")
+
+  override def receive = {
+    case "go" =>
+      wow ! "U OK?"
+      wow ! "init"
+      wow ! "U OK?"
+      wow ! "U OK?"
+    case "Up and running" =>
+      log.info("great, you are running!")
+    case unknown =>
+      log.warning("oops: {}", unknown)
+  }
+}
+
+object InitializationPatternMain extends App {
+  val system = ActorSystem("InitializationPattern")
+  val starter = system.actorOf(Props[StarterActor], "starter")
+
+  starter ! "go"
+  Thread.sleep(1000)
+  system.terminate()
 }
