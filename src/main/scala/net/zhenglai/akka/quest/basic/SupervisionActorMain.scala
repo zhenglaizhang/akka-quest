@@ -3,7 +3,8 @@ package net.zhenglai.akka.quest.basic
 import akka.actor.{ Actor, ActorLogging, ActorSystem, Kill, Props }
 
 class SupervisionActor extends Actor with ActorLogging {
-  override def receive = {
+  // Receive: type alias for PartialFunction[Any, Unit]
+  override def receive: Receive = {
     case "error" => throw new RuntimeException("error")
     case msg => log.info("received: {}", msg)
   }
