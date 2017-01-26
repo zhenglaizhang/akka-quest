@@ -1,8 +1,29 @@
 package net.zhenglai.akka.quest.basic
 
-import akka.actor.{ Actor, ActorLogging, ActorSystem, Kill, Props }
+import akka.actor.{ Actor, ActorLogging, ActorSystem, Kill, OneForOneStrategy, Props }
+import scala.concurrent.duration._
+
+import akka.actor.SupervisorStrategy.{ Escalate, Restart, Resume, Stop }
+
+// each actor is the supervisor of its children, and as such each actor defines fault handling supervisor strategy.
+// This strategy cannot be changed afterwards as it is an integral part of the actor system’s structure
 
 class SupervisionActor extends Actor with ActorLogging {
+
+  /*
+   one-for-one strategy, meaning that each child is treated separately (an all-for-one strategy works very similarly,
+   the only difference is that any decision is applied to all children of the supervisor, not only the failing one).
+   There are limits set on the restart frequency, namely maximum 10 restarts per minute; each of these settings could be left out,
+   which means that the respective limit does not apply, leaving the possibility to specify an absolute upper limit on the restarts or to make the restarts work infinitely. The child actor is stopped if the limit is exceeded.
+   */
+  override def supervisorStrategy =
+    OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1 minute) {
+      case _: ArithmeticException => Resume
+      case _: NullPointerException => Restart
+      case _: IllegalArgumentException => Stop
+      case _: Exception => Escalate
+    }
+
   // Receive: type alias for PartialFunction[Any, Unit]
   override def receive: Receive = {
     case "error" => throw new RuntimeException("error")
