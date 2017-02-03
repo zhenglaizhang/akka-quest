@@ -4,11 +4,11 @@ import java.nio.file.Paths
 
 import scala.concurrent.{ Await, Future }
 
-import akka.NotUsed
+import akka.{ Done, NotUsed }
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.stream.scaladsl.{ FileIO, Flow, Keep, Sink, Source }
-import akka.stream.{ ActorMaterializer, IOResult }
+import akka.stream.{ ActorMaterializer, IOResult, ThrottleMode }
 import akka.util.ByteString
 import scala.concurrent.duration._
 
@@ -33,18 +33,28 @@ object SimpleStreamMain extends App {
       .map(s => ByteString(s + "\n"))
       .toMat(FileIO.toPath(Paths.get(fileName)))(Keep.right)
 
-  val factorials = source.scan(BigInt(1))((acc, next) => {log.info("cur: {}", acc); acc * next})
+  val factorials = source.scan(BigInt(1))((acc, next) => acc * next)
   val result: Future[IOResult] =
     factorials
       .map(num => ByteString(s"$num\n"))
-      .runWith(FileIO.toPath(Paths.get("factorials.txt")))
+      .runWith(FileIO.toPath(Paths.get("target/factorials.txt")))
   result.foreach(r => log.info("io result: {}", r))
 
   factorials
     .map(_.toString)
-    .runWith(lineSink("factorials2.txt"))
+    .runWith(lineSink("target/factorials2.txt"))
+
+  val done: Future[Done] =
+    factorials
+      //      .zipWith(Source(0 to 100))((num, idx) => s"$idx! = $num")
+      .zipWithIndex
+      .map(s => s"${s._2}! = ${s._1}")
+      .throttle(1, 100 milliseconds, 1, ThrottleMode.shaping)
+      .runForeach(println)
+
 
   Await.ready(result, 10.seconds)
+  print(Await.result(done, 100.seconds))
   mat.shutdown()
   system.terminate()
 }
