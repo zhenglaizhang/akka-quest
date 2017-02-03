@@ -44,6 +44,9 @@ object SimpleStreamMain extends App {
     .map(_.toString)
     .runWith(lineSink("target/factorials2.txt"))
 
+  // Akka Streams implicitly implement pervasive flow control, all combinators respect back-pressure.
+  // This allows the throttle combinator to signal to all its upstream sources of data that it can only accept elements at a certain rate
+  // —when the incoming rate is higher than one per second the throttle combinator will assert back-pressure upstream.
   val done: Future[Done] =
     factorials
       //      .zipWith(Source(0 to 100))((num, idx) => s"$idx! = $num")
