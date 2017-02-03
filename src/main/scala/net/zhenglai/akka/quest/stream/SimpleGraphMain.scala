@@ -37,7 +37,8 @@ object SimpleGraphMain extends App {
   // Once the GraphDSL has been constructed though, the GraphDSL instance is immutable, thread-safe, and freely shareable.
   // The same is true of all graph pieces—sources, sinks, and flows
   val g = RunnableGraph.fromGraph(GraphDSL.create() { implicit builder: GraphDSL.Builder[NotUsed] =>
-    import GraphDSL.Implicits._ // bring in ~> & <~
+    import GraphDSL.Implicits._
+    // bring in ~> & <~
     val in = Source(1 to 10)
     val out = Sink.foreach(println)
 
@@ -58,6 +59,24 @@ object SimpleGraphMain extends App {
   })
 
   g.run()
+
+
+  val topHeadSink = Sink.head[Int]
+  val bottomHeadSink = Sink.head[Int]
+  val sharedDoubler = Flow[Int].map(_ * 2)
+
+  // importing using builder.add(...) ignores the materialized value of the imported graph
+  // while importing via the factory method allows its inclusion
+  RunnableGraph.fromGraph(GraphDSL.create(topHeadSink, bottomHeadSink)((_, _)) { implicit b =>
+    (topHS, bottomHS) =>
+      import GraphDSL.Implicits._
+      val bcast = b.add(Broadcast[Int](2))
+      Source.single(1) ~> bcast.in
+
+      bcast.out(0) ~> sharedDoubler ~> topHS.in
+      bcast.out(1) ~> sharedDoubler ~> bottomHS.in
+      ClosedShape
+  })
 
   Thread.sleep(1000)
   system.terminate()
