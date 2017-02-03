@@ -33,6 +33,9 @@ RunnableGraph
 A Flow that has both ends "attached" to a Source and Sink respectively, and is ready to be run().
 * */
 
+
+// After a stream is properly terminated by having both a source and a sink, it will be represented by the RunnableGraph type, indicating that it is ready to be executed.
+
 // When we talk about asynchronous, non-blocking backpressure we mean that the processing stages available in Akka Streams will not use blocking calls but asynchronous message passing to exchange messages between each other, and they will use asynchronous means to slow down a fast producer, without blocking its thread.
 // This is a thread-pool friendly design, since entities that need to wait (a fast producer waiting on a slow consumer) will not block the thread but can hand it back for further use to an underlying thread-pool.
 

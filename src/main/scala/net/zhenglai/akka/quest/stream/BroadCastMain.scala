@@ -72,18 +72,25 @@ object BroadCastMain extends App {
   g.run()
 
 
-
   // Remember those mysterious Mat type parameters on Source[+Out, +Mat], Flow[-In, +Out, +Mat] and Sink[-In, +Mat]?
   // They represent the type of values these processing parts return when materialized
   // A RunnableGraph may be reused and materialized multiple times, because it is just the "blueprint" of the stream.
 
   // flow, reusable
+  // Flows being simply a description of the processing pipeline they are immutable, thread-safe, and freely shareable
   def countFlow[T]: Flow[T, Int, NotUsed] = Flow[T].map(_ => 1)
+
   val sumSink: Sink[Int, Future[Int]] = Sink.fold(0)(_ + _)
+
+  // connect the Source to the Sink, obtaining a RunnableGraph
+  //  Every stream processing stage can produce a materialized value
   val counterGraph: RunnableGraph[Future[Int]] =
-    tweets
-      .via(countFlow)
-      .toMat(sumSink)(Keep.right)
+  tweets
+    .via(countFlow)
+    // toMat to indicate that we want to transform the materialized value of the source and sink
+    .toMat(sumSink)(Keep.right)
+
+  // a convenience method called runWith() available for Sink, Source or Flow requiring
 
   val sum: Future[Int] = counterGraph.run()
   sum.foreach(c => println(s"1st: Total $c tweets processed"))
@@ -91,9 +98,17 @@ object BroadCastMain extends App {
   // runWith(someSink) short for toMat(someSink)(Keep.right).run()
   tweets.map(_ => 1).runWith(sumSink).foreach(c => println(s"2rd: Total $c tweets processed"))
 
+
+  // broadcast to a sink inline
+  val otherSinks: Sink[Int, NotUsed] =
+    Flow[Int].alsoTo(Sink.foreach(x => println(s"alsoTo: $x"))).to(Sink.foreach(x => println(s"to:$x")))
+  Source(1 to 6).to(otherSinks).run()
+
   Thread.sleep(10000)
   system.terminate()
 }
 
 // A graph can also have one of several other shapes, with one or more unconnected ports.
 // Having unconnected ports expresses a graph that is a partial graph.
+
+//  Akka Streams do not allow null to be passed through the stream as an element. In case you want to model the concept of absence of a value we recommend using scala.Option or scala.util.Either.
