@@ -4,8 +4,10 @@ import scala.concurrent.{ Await, Future }
 
 import akka.actor.ActorSystem
 import akka.stream._
-import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, RunnableGraph, Sink, Source, Zip, ZipWith }
+import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, Merge, RunnableGraph, Sink, Source, Zip, ZipWith }
 import scala.concurrent.duration._
+
+import akka.util.Timeout
 
 // Source is a partial graph with exactly one output, that is it returns a SourceShape.
 // Sink is a partial graph with exactly one input, that is it returns a SinkShape.
@@ -84,9 +86,25 @@ object PartialGraphMain extends App {
       FlowShape(bcast.in, zip.out)
     })
 
+  // tuple unpacking!!
   val (_, f) = pairUpWithToString.runWith(Source(List(1, 2, 3)), Sink.last)
-  // TODO: fix it
   println(s"f = ${Await.result(f, 200.millis)}")
+
+  val s1 = Source(List(1))
+  val s2 = Source(List(2, 2))
+  val merged = Source.combine(s1, s2)(Merge(_, eagerComplete = false))
+  val mr: Future[Int] = merged.runWith(Sink.fold(0)(_ + _))
+  println(s"mr = ${Await.result(mr, 200.millis)}")
+
+
+
+  implicit val timeout = Timeout(200.millis)
+  // TODO: fix it
+  val actorRef = Await.result(system.actorSelection("some/remote/actor").resolveOne(), 200.millis) // remote actorRef
+  val sendRemotely = Sink.actorRef(actorRef, "Done")
+  val localProcessing = Sink.foreach[Int](_ => /* do something useful */())
+  val sink = Sink.combine(sendRemotely, localProcessing)(Broadcast[Int](_))
+  Source(List(1, 2, 3)).runWith(sink)
 
   Thread.sleep(1000)
   system.terminate()
