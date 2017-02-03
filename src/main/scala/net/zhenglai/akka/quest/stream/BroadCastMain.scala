@@ -2,11 +2,11 @@ package net.zhenglai.akka.quest.stream
 
 import scala.concurrent.Future
 
-import akka.{ Done, NotUsed }
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, Keep, RunnableGraph, Sink, Source }
 import akka.stream.{ ActorMaterializer, ClosedShape, OverflowStrategy }
+import akka.{ Done, NotUsed }
 
 object BroadCastMain extends App {
   implicit val system: ActorSystem = ActorSystem("BroadcastMainSystem")
@@ -86,9 +86,12 @@ object BroadCastMain extends App {
       .toMat(sumSink)(Keep.right)
 
   val sum: Future[Int] = counterGraph.run()
-  sum.foreach(c => println(s"Total $c tweets processed"))
+  sum.foreach(c => println(s"1st: Total $c tweets processed"))
 
-  Thread.sleep(1000)
+  // runWith(someSink) short for toMat(someSink)(Keep.right).run()
+  tweets.map(_ => 1).runWith(sumSink).foreach(c => println(s"2rd: Total $c tweets processed"))
+
+  Thread.sleep(10000)
   system.terminate()
 }
 
