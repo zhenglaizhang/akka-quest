@@ -12,6 +12,7 @@ import akka.stream.{ ActorMaterializer, IOResult, ThrottleMode }
 import akka.util.ByteString
 import scala.concurrent.duration._
 
+// Streams always start flowing from a Source[Out,M1] then can continue through Flow[In,Out,M2] elements or more advanced graph elements to finally be consumed by a Sink[In,M3]
 object SimpleStreamMain extends App {
   // NotUsed: auxiliary value
   implicit val system: ActorSystem = ActorSystem("SimpleStreamSystem")
@@ -27,6 +28,8 @@ object SimpleStreamMain extends App {
   //  source.runFold(0)(_ + _).foreach(i => print(s"sum: $i"))
   //  source.runForeach(i => log.info(i.toString))
 
+  //cause eventual buffer overflows and instability of such systems.
+  // Instead Akka Streams depend on internal backpressure signals that allow to control what should happen in such scenarios.
 
   def lineSink(fileName: String): Sink[String, Future[IOResult]] =
     Flow[String] // left: NotUsed
