@@ -1,7 +1,9 @@
 package net.zhenglai.akka.quest.stream
 
 import scala.collection.immutable
-import akka.stream.{ Inlet, Outlet, Shape }
+
+import akka.stream.FanInShape.{ Init, Name }
+import akka.stream.{ FanInShape, Inlet, Outlet, Shape }
 
 //  build reusable, encapsulated components of arbitrary input and output ports using the graph DSL.
 
@@ -46,6 +48,18 @@ case class PriorityWorkerPoolShape[In, Out](
 // 1) `SourceShape`, `SinkShape`, `FlowShape` for simpler shapes
 // 2) UniformFanInShape and UniformFanOutShape for junctions with multiple input (or output) ports of the same type,
 // 3) FanInShape1, FanInShape2, ..., FanOutShape1, FanOutShape2, ... for junctions with multiple input (or output) ports of different types.
+
+
+// Since our shape has two input ports and one output port, we can just use the FanInShape DSL to define our custom shape:
+class PriorityWorkerPoolShape2[In, Out](_init: Init[Out] = Name("PriorityWorkerPool"))
+  extends FanInShape[Out](_init) {
+  protected def construct(init: Init[Out]) = new PriorityWorkerPoolShape2(i)
+
+  val jobsIn = newInlet[In]("jobsIn")
+  val priorityJobsIn = newInlet[In]("priorityJobsIn")
+
+  // Outlet[Out] with name "out" is automatically created
+}
 
 
 object ReusableGraphMain extends App {
