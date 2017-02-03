@@ -22,9 +22,28 @@ Sink: something with exactly one input stream
 Flow: something with exactly one input and one output stream
 BidiFlow: something with exactly two input streams and two output streams that conceptually behave like two Flows of opposite direction
 Graph: a packaged stream processing topology that exposes a certain set of input and output ports, characterized by an object of type Shape.
+
+Source
+A processing stage with exactly one output, emitting data elements whenever downstream processing stages are ready to receive them.
+Sink
+A processing stage with exactly one input, requesting and accepting data elements possibly slowing down the upstream producer of elements
+Flow
+A processing stage which has exactly one input and output, which connects its up- and downstreams by transforming the data elements flowing through it.
+RunnableGraph
+A Flow that has both ends "attached" to a Source and Sink respectively, and is ready to be run().
 * */
 
+// When we talk about asynchronous, non-blocking backpressure we mean that the processing stages available in Akka Streams will not use blocking calls but asynchronous message passing to exchange messages between each other, and they will use asynchronous means to slow down a fast producer, without blocking its thread.
+// This is a thread-pool friendly design, since entities that need to wait (a fast producer waiting on a slow consumer) will not block the thread but can hand it back for further use to an underlying thread-pool.
 
+
+// This property of bounded buffers is one of the differences from the actor model, where each actor usually has an unbounded, or a bounded, but dropping mailbox.
+// Akka Stream processing entities have bounded "mailboxes" that do not drop.
+
+// Back-pressure:
+// A means of flow-control, a way for consumers of data to notify a producer about their current availability,
+// effectively slowing down the upstream producer to match their consumption speeds.
+// In the context of Akka Streams back-pressure is always understood as non-blocking and asynchronous.
 
 // ERROR vs. FAILURE
 // an error is accessible within the stream as a normal data element, while a failure means that the stream itself has failed and is collapsing.
