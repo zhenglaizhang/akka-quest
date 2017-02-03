@@ -5,7 +5,7 @@ import scala.concurrent.Future
 import akka.{ Done, NotUsed }
 import akka.actor.ActorSystem
 import akka.event.Logging
-import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, RunnableGraph, Sink, Source }
+import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, Keep, RunnableGraph, Sink, Source }
 import akka.stream.{ ActorMaterializer, ClosedShape, OverflowStrategy }
 
 object BroadCastMain extends App {
@@ -39,7 +39,7 @@ object BroadCastMain extends App {
 
   val tweets: Source[Tweet, NotUsed] =
     Source.fromIterator(() => (0 to 20).toIterator)
-    .map(i => Tweet(Author(s"a$i"), i.toLong, s"tweet$i #tag${i}1 #tag${i}2 #akka"))
+      .map(i => Tweet(Author(s"a$i"), i.toLong, s"tweet$i #tag${i}1 #tag${i}2 #akka"))
 
   // One of the main advantages of Akka Streams is that they always propagate back-pressure information from stream Sinks (Subscribers) to their Sources (Publishers).
   // It is not an optional feature, and is enabled at all times.
@@ -48,7 +48,7 @@ object BroadCastMain extends App {
   tweets
     // TODO: dive into
     .buffer(10, OverflowStrategy.dropHead) // we only care about latest 10 tweets
-    .map{ x => Thread.sleep(1000); x }
+    .map { x => Thread.sleep(10); x }
     .filter(_.hashtags.contains(akkaTag))
     .map(_.author)
 
@@ -71,7 +71,24 @@ object BroadCastMain extends App {
 
   g.run()
 
-  Thread.sleep(10 * 1000)
+
+
+  // Remember those mysterious Mat type parameters on Source[+Out, +Mat], Flow[-In, +Out, +Mat] and Sink[-In, +Mat]?
+  // They represent the type of values these processing parts return when materialized
+  // A RunnableGraph may be reused and materialized multiple times, because it is just the "blueprint" of the stream.
+
+  // flow, reusable
+  def countFlow[T]: Flow[T, Int, NotUsed] = Flow[T].map(_ => 1)
+  val sumSink: Sink[Int, Future[Int]] = Sink.fold(0)(_ + _)
+  val counterGraph: RunnableGraph[Future[Int]] =
+    tweets
+      .via(countFlow)
+      .toMat(sumSink)(Keep.right)
+
+  val sum: Future[Int] = counterGraph.run()
+  sum.foreach(c => println(s"Total $c tweets processed"))
+
+  Thread.sleep(1000)
   system.terminate()
 }
 
