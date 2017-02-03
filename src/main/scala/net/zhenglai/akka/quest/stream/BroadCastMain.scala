@@ -6,7 +6,7 @@ import akka.{ Done, NotUsed }
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, RunnableGraph, Sink, Source }
-import akka.stream.{ ActorMaterializer, ClosedShape }
+import akka.stream.{ ActorMaterializer, ClosedShape, OverflowStrategy }
 
 object BroadCastMain extends App {
   implicit val system: ActorSystem = ActorSystem("BroadcastMainSystem")
@@ -38,17 +38,19 @@ object BroadCastMain extends App {
 
 
   val tweets: Source[Tweet, NotUsed] =
-    Source.fromIterator(() =>
-      List(
-        Tweet(Author("a1"), 1L, "tweet1 #tag11 #tag12 "),
-        Tweet(Author("a2"), 2L, "tweet2 #tag21 #tag22")
-      ).toIterator
-    )
+    Source.fromIterator(() => (0 to 20).toIterator)
+    .map(i => Tweet(Author(s"a$i"), i.toLong, s"tweet$i #tag${i}1 #tag${i}2 #akka"))
 
+  // One of the main advantages of Akka Streams is that they always propagate back-pressure information from stream Sinks (Subscribers) to their Sources (Publishers).
+  // It is not an optional feature, and is enabled at all times.
+  // With Akka Streams buffering can and must be handled explicitly.
   val authors: Source[Author, NotUsed] =
-    tweets
-      .filter(_.hashtags.contains(akkaTag))
-      .map(_.author)
+  tweets
+    // TODO: dive into
+    .buffer(10, OverflowStrategy.dropHead) // we only care about latest 10 tweets
+    .map{ x => Thread.sleep(1000); x }
+    .filter(_.hashtags.contains(akkaTag))
+    .map(_.author)
 
   authors.runWith(Sink.foreach(println))
 
@@ -69,6 +71,7 @@ object BroadCastMain extends App {
 
   g.run()
 
+  Thread.sleep(10 * 1000)
   system.terminate()
 }
 
