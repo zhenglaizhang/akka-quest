@@ -50,6 +50,12 @@ object MaterializedValueMain extends App {
   cancellable.cancel()
   future.map(_ + 3)
 
+  // In Akka Streams almost all computation stages preserve input order of elements.
+  // This property is even uphold by async operations such as mapAsync,
+  // however an unordered version exists called mapAsyncUnordered which does not preserve this ordering.
+  // However, in the case of Junctions which handle multiple input streams (e.g. Merge) the output order is, in general, not defined for elements arriving on different input ports.
+  // Specialized elements such as Zip however do guarantee their outputs order, as each output element depends on all upstream elements having been signalled already
+  // If you find yourself in need of fine grained control over order of emitted elements in fan-in scenarios consider using MergePreferred or GraphStage – which gives you full control over how the merge is performed.
 
   // with Graph API
   // todo: understand it
