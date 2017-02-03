@@ -5,6 +5,8 @@ import scala.collection.immutable
 import akka.stream.FanInShape.{ Init, Name }
 import akka.stream.{ FanInShape, Inlet, Outlet, Shape }
 
+// TODO: read http://doc.akka.io/docs/akka/2.4/scala/stream/stream-graphs.html
+
 //  build reusable, encapsulated components of arbitrary input and output ports using the graph DSL.
 
 
