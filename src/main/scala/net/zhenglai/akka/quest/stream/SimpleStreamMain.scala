@@ -2,15 +2,34 @@ package net.zhenglai.akka.quest.stream
 
 import java.nio.file.Paths
 
+import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
-import akka.{ Done, NotUsed }
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.stream.scaladsl.{ FileIO, Flow, Keep, Sink, Source }
 import akka.stream.{ ActorMaterializer, IOResult, ThrottleMode }
 import akka.util.ByteString
-import scala.concurrent.duration._
+import akka.{ Done, NotUsed }
+
+// Akka Streams does not send dropped stream elements to the dead letter office
+// The process of materialization will often create specific objects that are useful to interact with the processing engine once it is running, for example for shutting it down or for extracting metrics.
+// This means that the materialization function produces a result termed the materialized value of a graph.
+
+/*
+Source: something with exactly one output stream
+Sink: something with exactly one input stream
+Flow: something with exactly one input and one output stream
+BidiFlow: something with exactly two input streams and two output streams that conceptually behave like two Flows of opposite direction
+Graph: a packaged stream processing topology that exposes a certain set of input and output ports, characterized by an object of type Shape.
+* */
+
+
+
+// ERROR vs. FAILURE
+// an error is accessible within the stream as a normal data element, while a failure means that the stream itself has failed and is collapsing.
+// In concrete terms, on the Reactive Streams interface level data elements (including errors) are signaled via onNext while failures raise the onError signal.
+// the Reactive Streams interfaces (Publisher/Subscription/Subscriber) are modeling the low-level infrastructure for passing streams between execution units
 
 // Streams always start flowing from a Source[Out,M1] then can continue through Flow[In,Out,M2] elements or more advanced graph elements to finally be consumed by a Sink[In,M3]
 object SimpleStreamMain extends App {
