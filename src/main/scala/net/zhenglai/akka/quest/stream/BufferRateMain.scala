@@ -2,9 +2,10 @@ package net.zhenglai.akka.quest.stream
 
 import scala.util.Random
 
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.{ Flow, Sink, Source }
-import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, Attributes }
+import akka.stream.{ ActorMaterializer, ActorMaterializerSettings, Attributes, OverflowStrategy }
 
 
 // When upstream and downstream rates differ, especially when the throughput has spikes, it can be useful to introduce buffers in a stream.
@@ -128,6 +129,28 @@ object BufferRateMain extends App {
     .via(driftFlow)
     .addAttributes(Attributes.inputBuffer(initial = 1, max = 1))
     .runForeach(x => println(s"drift: $x"))
+
+
+  // BUFFERS
+  //  explicit user defined buffers that are part of the domain logic of the stream processing pipeline of an application.
+  case class Job()
+
+  def inboundJobsConnector() = ???
+
+  // Getting a stream of jobs from an imaginary external system as a Source
+  // ensure that 1000 jobs (but not more) are dequeued from an external (imaginary)
+  // system and stored locally in memory - relieving the external system:
+  val jobs: Source[Job, NotUsed] = inboundJobsConnector()
+  jobs.buffer(1000, OverflowStrategy.backpressure)
+  jobs.buffer(1000, OverflowStrategy.dropTail)
+  jobs.buffer(1000, OverflowStrategy.dropNew)
+  jobs.buffer(1000, OverflowStrategy.dropHead)
+
+  // aggressive, useful when dropping jobs is preferred to delaying jobs
+  jobs.buffer(1000, OverflowStrategy.dropBuffer)
+
+  // If our imaginary external job provider is a client using our API, we might want to enforce that the client cannot have more than 1000 queued jobs otherwise we consider it flooding and terminate the connection.
+  jobs.buffer(1000, OverflowStrategy.fail)
 
   Thread.sleep(1000)
   system.terminate()
