@@ -55,7 +55,7 @@ case class PriorityWorkerPoolShape[In, Out](
 // Since our shape has two input ports and one output port, we can just use the FanInShape DSL to define our custom shape:
 class PriorityWorkerPoolShape2[In, Out](_init: Init[Out] = Name("PriorityWorkerPool"))
   extends FanInShape[Out](_init) {
-  protected def construct(init: Init[Out]) = new PriorityWorkerPoolShape2(i)
+  protected def construct(init: Init[Out]) = new PriorityWorkerPoolShape2(init)
 
   val jobsIn = newInlet[In]("jobsIn")
   val priorityJobsIn = newInlet[In]("priorityJobsIn")
