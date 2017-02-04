@@ -104,6 +104,31 @@ object BufferRateMain extends App {
   // TODO: how to simulate slow consumer?
 
 
+  // EXPANDING
+  // Expand helps to deal with slow producers which are unable to keep up with the demand coming from consumers.
+  // Expand allows to extrapolate a value to be sent as an element to a consumer.
+  val lastFlow = Flow[Double]
+    .expand(Iterator.continually(_))
+  // sends the same element to consumer when producer does not send any new elements.
+
+  Source(1 to 2)
+    .map(_.toDouble)
+    .via(lastFlow)
+    .addAttributes(Attributes.inputBuffer(initial = 1, max = 1))
+    .runForeach(x => println(s"expand: $x"))
+
+
+  // tracks and reports a drift between fast consumer and slow producer
+  // that all of the elements coming from upstream will go through expand at least once. This means that the output of this flow is going to report a drift of zero if producer is fast enough, or a larger drift otherwise.
+  val driftFlow = Flow[Double]
+    .expand(i => Iterator.from(0).map(i -> _))
+
+  Source(1 to 100)
+    .map(_.toDouble)
+    .via(driftFlow)
+    .addAttributes(Attributes.inputBuffer(initial = 1, max = 1))
+    .runForeach(x => println(s"drift: $x"))
+
   Thread.sleep(1000)
   system.terminate()
 }
