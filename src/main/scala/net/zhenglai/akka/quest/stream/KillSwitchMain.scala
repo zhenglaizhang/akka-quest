@@ -38,7 +38,33 @@ object KillSwitchMain extends App {
   val error = new RuntimeException("boom!")
   killSwitch1.abort(error)
 
+
   Thread.sleep(2000)
   println("last1: " + Await.result(last1.failed, 2 second))
+
+
+  // A SharedKillSwitch allows to control the completion of an arbitrary number graphs of FlowShape.
+  // It can be materialized multiple times via its flow method, and all materialized graphs linked to it are controlled by the switch.
+  val sharedKillSwitch = KillSwitches.shared("my-kill-switch")
+  val last2 = countingSrc
+    .via(sharedKillSwitch.flow)
+    .runWith(lastSink)
+
+  val delayedLast = countingSrc
+    .delay(1 second, DelayOverflowStrategy.backpressure)
+    .via(sharedKillSwitch.flow)
+    .runWith(lastSink)
+  Thread.sleep(2000)
+  sharedKillSwitch.shutdown()
+  println(s"last2 = ${Await.result(last2, 3 seconds)}")
+  println(s"delayedLast = ${Await.result(delayedLast, 5 seconds)}")
+
+
+  // sharedKillSwitch.abort(error)
+
+
+  // A UniqueKillSwitch is always a result of a materialization,
+  // whilst SharedKillSwitch needs to be constructed before any materialization takes place.
+
   system.terminate()
 }
