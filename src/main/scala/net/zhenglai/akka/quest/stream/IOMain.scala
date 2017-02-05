@@ -67,6 +67,8 @@ object IOMain extends App {
     // the IncomingConnection source connections.
   }
 
+  // todo: http://doc.akka.io/docs/akka/2.4/scala/stream/stream-io.html
+
   //  Thread.sleep(100)
   //  system.terminate()
 }
