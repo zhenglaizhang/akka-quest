@@ -29,5 +29,16 @@ object KillSwitchMain extends App {
 
   println("last: " + Await.result(last, 1 second))
 
+
+  val (killSwitch1, last1) = countingSrc
+    .viaMat(KillSwitches.single)(Keep.right)
+    .toMat(lastSink)(Keep.both)
+    .run()
+
+  val error = new RuntimeException("boom!")
+  killSwitch1.abort(error)
+
+  Thread.sleep(2000)
+  println("last1: " + Await.result(last1.failed, 2 second))
   system.terminate()
 }
