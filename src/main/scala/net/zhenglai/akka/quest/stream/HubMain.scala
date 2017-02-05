@@ -3,8 +3,10 @@ package net.zhenglai.akka.quest.stream
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{ MergeHub, RunnableGraph, Sink, Source }
+import akka.stream.scaladsl.{ BroadcastHub, Keep, MergeHub, RunnableGraph, Sink, Source }
+import scala.concurrent.duration._
 
+// Dynamic fan-in and fan-out with MergeHub and BroadcastHub
 object HubMain extends App {
   implicit val system: ActorSystem = ActorSystem()
   implicit val mat: ActorMaterializer = ActorMaterializer()
@@ -32,9 +34,9 @@ object HubMain extends App {
   val toConsumer: Sink[String, NotUsed] = runnableGraph.run()
 
   // Feeding two independent sources into the hub.
-  Source.single("hello").runWith(toConsumer)
-  Source.repeat("wow").runWith(toConsumer)
-  Source.single("hub").runWith(toConsumer)
+//  Source.single("hello").runWith(toConsumer)
+//  Source.repeat("wow").runWith(toConsumer)
+//  Source.single("hub").runWith(toConsumer)
 
   Thread.sleep(1)
   // ensures proper startup order.
@@ -43,6 +45,25 @@ object HubMain extends App {
   // we attached previously until it cancels.
 
 
+  val producer = Source.tick(10 millis, 10 millis, "New message")
+  // Attach a BroadcastHub Sink to the producer. This will materialize to a
+  // corresponding Source.
+  // (We need to use toMat and Keep.right since by default the materialized
+  // value to the left is used)
+  val runnableGraph2: RunnableGraph[Source[String, NotUsed]] =
+  producer.toMat(BroadcastHub.sink(bufferSize = 256))(Keep.right)
 
+  // By running/materializing the producer, we get back a Source, which
+  // gives us access to the elements published by the producer.
+  val fromProducer: Source[String, NotUsed] = runnableGraph2.run()
+
+
+  // If there are no subscribers attached to this hub then it will not drop any elements
+  // but instead backpressure the upstream producer until subscribers arrive.
+  // 2 independent consumers
+  fromProducer.runForeach(msg => println("consumer1: " + msg))
+  fromProducer.runForeach(msg => println("consumer2: " + msg))
+
+  Thread.sleep(1000)
   system.terminate()
 }
