@@ -8,7 +8,7 @@ import scala.concurrent.duration._
 
 import akka.pattern.pipe
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.{ ActorMaterializer, OverflowStrategy }
 import akka.testkit.TestProbe
 
 // It is important to keep your data processing pipeline
@@ -67,5 +67,27 @@ class StreamTest extends FunSuite {
     probe.expectMsg(3.seconds, Tick)
     cancellable.cancel()
     probe.expectMsg(3 seconds, "completed")
+  }
+
+  test("test with Sink.actorRef 2") {
+    val sinkUnderTet = Flow[Int]
+      .map(_.toString)
+      .toMat(Sink.fold("")(_ + _))(Keep.right)
+
+    val (ref, future) = Source.actorRef(8, OverflowStrategy.fail)
+      .toMat(sinkUnderTet)(Keep.both)
+      .run()
+
+    ref ! 1
+    ref ! 2
+    ref ! 3
+    ref ! akka.actor.Status.Success("done")
+
+    val result = Await.result(future, 3 seconds)
+    assert(result == "123")
+
+    // Similarly to Sink.actorRef that provides control over
+    // received elements, we can use Source.actorRef and have
+    // full control over elements to be sent.
   }
 }
