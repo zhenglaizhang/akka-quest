@@ -9,7 +9,7 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.scaladsl.{ BidiFlow, Flow, GraphDSL, Sink, Source }
-import akka.stream.stage.{ GraphStage, GraphStageLogic, InHandler, OutHandler }
+import akka.stream.stage._
 import akka.stream.testkit.scaladsl.TestSink
 import akka.util.ByteString
 import org.scalatest.FunSuite
@@ -214,7 +214,6 @@ class CustomizedGraphStageTest extends FunSuite {
           }
 
 
-
           // Completion handling usually (but not exclusively) comes into
           // the picture when processing stages need to emit a few more
           // elements after their upstream source has been completed.
@@ -249,25 +248,27 @@ class CustomizedGraphStageTest extends FunSuite {
 
       val shape = FlowShape.of(in, out)
 
-      override def createLogic(inheritedAttributes: Attributes) = new GraphStageLogic(shape) {
-        setHandler(in, new InHandler {
-          @scala.throws[Exception](classOf[Exception])
-          override def onPush() = {
-            val elem = grab(in)
+      override def createLogic(inheritedAttributes: Attributes) =
+        new GraphStageLogic(shape) with StageLogging {
+          setHandler(in, new InHandler {
+            @scala.throws[Exception](classOf[Exception])
+            override def onPush() = {
+              val elem = grab(in)
 
-            // this will temporarily suspend this handler until the two elems are
-            // emitted and then reinstates it
-            emitMultiple(out, scala.collection.immutable.Iterable(elem, elem))
-          }
-        })
+              // this will temporarily suspend this handler until the two elems are
+              // emitted and then reinstates it
+              log.debug("emitting two: {}", elem)
+              emitMultiple(out, scala.collection.immutable.Iterable(elem, elem))
+            }
+          })
 
-        setHandler(out, new OutHandler {
-          @scala.throws[Exception](classOf[Exception])
-          override def onPull() = {
-            pull(in)
-          }
-        })
-      }
+          setHandler(out, new OutHandler {
+            @scala.throws[Exception](classOf[Exception])
+            override def onPull() = {
+              pull(in)
+            }
+          })
+        }
     }
 
     val sub = Source(3 to 5)
