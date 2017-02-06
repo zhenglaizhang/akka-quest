@@ -3,17 +3,16 @@ package net.zhenglai.quest.akka.test
 import java.nio.ByteOrder
 
 import scala.concurrent.Await
+import scala.concurrent.duration._
 
 import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.stream._
 import akka.stream.scaladsl.{ BidiFlow, Flow, GraphDSL, Sink, Source }
 import akka.stream.stage.{ GraphStage, GraphStageLogic, InHandler, OutHandler }
+import akka.stream.testkit.scaladsl.TestSink
 import akka.util.ByteString
 import org.scalatest.FunSuite
-import scala.concurrent.duration._
-
-import akka.actor.ActorSystem
-import akka.stream.testkit.scaladsl.TestSink
 
 // bidirectional flows
 //  codec stage
@@ -195,5 +194,87 @@ class CustomizedGraphStageTest extends FunSuite {
       .runWith(TestSink.probe)
     sub.request(10)
       .expectNextN(List(1, 3, 5))
+  }
+
+  test("customized Duplicator") {
+    class Duplicator[A] extends GraphStage[FlowShape[A, A]] {
+      val in = Inlet[A]("Duplicator.in")
+      val out = Outlet[A]("Dupcator.out")
+
+      @scala.throws[Exception](classOf[Exception])
+      override def createLogic(inheritedAttributes: Attributes) = new GraphStageLogic(shape) {
+        var lastElem: Option[A] = None
+
+        setHandler(in, new InHandler {
+          @scala.throws[Exception](classOf[Exception])
+          override def onPush() = {
+            val elem = grab(in)
+            lastElem = Some(elem)
+            push(out, elem)
+          }
+
+
+
+          // Completion handling usually (but not exclusively) comes into
+          // the picture when processing stages need to emit a few more
+          // elements after their upstream source has been completed.
+          // todo: understand it!!
+          // handle the case where the upstream closes while the stage still has
+          // elements it wants to push downstream.
+          override def onUpstreamFinish() = {
+            if (lastElem.isDefined) emit(out, lastElem.get)
+            complete(out)
+          }
+        })
+
+        setHandler(out, new OutHandler {
+          @scala.throws[Exception](classOf[Exception])
+          override def onPull() = {
+            if (lastElem.isDefined) {
+              push(out, lastElem.get)
+              lastElem = None
+            } else {
+              pull(in)
+            }
+          }
+        })
+      }
+
+      override def shape = FlowShape.of(in, out)
+    }
+
+    class Duplicator2[A] extends GraphStage[FlowShape[A, A]] {
+      val in = Inlet[A]("Duplicator.in")
+      val out = Outlet[A]("Duplicator.out")
+
+      val shape = FlowShape.of(in, out)
+
+      override def createLogic(inheritedAttributes: Attributes) = new GraphStageLogic(shape) {
+        setHandler(in, new InHandler {
+          @scala.throws[Exception](classOf[Exception])
+          override def onPush() = {
+            val elem = grab(in)
+
+            // this will temporarily suspend this handler until the two elems are
+            // emitted and then reinstates it
+            emitMultiple(out, scala.collection.immutable.Iterable(elem, elem))
+          }
+        })
+
+        setHandler(out, new OutHandler {
+          @scala.throws[Exception](classOf[Exception])
+          override def onPull() = {
+            pull(in)
+          }
+        })
+      }
+    }
+
+    val sub = Source(3 to 5)
+      .via(new Duplicator2[Int])
+      .runWith(TestSink.probe)
+
+    sub.request(10)
+      .expectNextN(List(3, 3, 4, 4, 5, 5))
   }
 }
