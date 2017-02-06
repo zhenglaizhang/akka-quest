@@ -8,7 +8,7 @@ import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.pattern
 import akka.pattern.pipe
-import akka.stream.scaladsl.{ Compression, Flow, Keep, Sink, Source }
+import akka.stream.scaladsl.{ Compression, Flow, Framing, Keep, Sink, Source }
 import akka.stream.testkit.scaladsl.{ TestSink, TestSource }
 import akka.stream.{ ActorMaterializer, Attributes, OverflowStrategy }
 import akka.testkit.TestProbe
@@ -194,9 +194,9 @@ class StreamTest extends FunSuite {
     val uncompressed = Source(List("abc" * 12))
       .map(ByteString(_))
       .via(Compression.gzip)
-//      .map(_.utf8String)
+      //      .map(_.utf8String)
       .log("gzipped")
-//      .map(ByteString(_))
+      //      .map(ByteString(_))
       .via(Compression.gunzip())
       .map(_.utf8String)
       .log("gunzipped")
@@ -205,5 +205,18 @@ class StreamTest extends FunSuite {
 
     uncompressed
       .requestNext("abc" * 12)
+  }
+
+  test("framing") {
+    val sub = Source(List("abc\nab", "c\r\nabcd\nabcde\r", "\nwow"))
+      .log("raw")
+      .map(ByteString(_))
+      .via(Framing.delimiter(ByteString("\r\n"), maximumFrameLength = 100, allowTruncation = true))
+      .map(_.utf8String)
+      .log("splitted")
+      .withAttributes(Attributes.logLevels(onElement = Logging.InfoLevel))
+      .runWith(TestSink.probe)
+    sub.request(100)
+      .expectNextN(List("abc", "abc", "abcd", "abcde", "wow"))
   }
 }
