@@ -6,7 +6,7 @@ import scala.util.Failure
 
 import akka.actor.ActorSystem
 import akka.event.Logging
-import akka.pattern
+import akka.{ NotUsed, pattern }
 import akka.pattern.pipe
 import akka.stream.scaladsl.{ Compression, Flow, Framing, Keep, Sink, Source }
 import akka.stream.testkit.scaladsl.{ TestSink, TestSource }
@@ -21,6 +21,18 @@ class StreamTest extends FunSuite {
   implicit val system: ActorSystem = ActorSystem()
   implicit val mat: ActorMaterializer = ActorMaterializer()
   implicit val ec = system.dispatcher
+
+  def reduceByKey[In, K, Out](
+    maximumGroupSize: Int,
+    groupKey: (In) => K,
+    map: (In) => Out
+  )(reduce: (Out, Out) => Out): Flow[In, (K, Out), NotUsed] = {
+    Flow[In]
+      .groupBy[K](maximumGroupSize, groupKey)
+      .map(e => groupKey(e) -> map(e))
+      .reduce((l, r) => l._1 -> reduce(l._2, r._2))
+      .mergeSubstreams
+  }
 
   test("test simple sink") {
     val sinkUnderTest = Flow[Int]
@@ -218,5 +230,35 @@ class StreamTest extends FunSuite {
       .runWith(TestSink.probe)
     sub.request(100)
       .expectNextN(List("abc", "abc", "abcd", "abcde", "wow"))
+  }
+
+  test("reduce by key") {
+    // this defines the breadth of the groupBy and merge operations.
+    // Akka Streams is focused on bounded resource consumption and
+    // the number of concurrently open inputs to the merge operator
+    // describes the amount of resources needed by the merge itself.
+    //  resource bound!!
+    val MAX_DISTINCT_WORDS = 10
+    val counts: Source[(String, Int), NotUsed] =
+      Source(List("abc", "ab", "abc", "ab", "ab", "abcd"))
+        .groupBy(MAX_DISTINCT_WORDS, identity) // return SubFlow
+        .map(_ -> 1)
+        .reduce((l, r) => (l._1, l._2 + r._2))
+        .mergeSubstreams
+
+    val result = counts.runWith(TestSink.probe)
+    result.request(10)
+      .expectNextUnorderedN(List("abc" -> 2, "ab" -> 3, "abcd" -> 1))
+  }
+
+  test("reduceByKey") {
+    def num(s: String) = 1
+
+    val sub = Source(List("abc", "abc", "abcd"))
+      .via(reduceByKey[String, String, Int](10, identity, num)(_ + _))
+      .runWith(TestSink.probe)
+
+    sub.request(10L)
+      .expectNextUnorderedN(List("abc" -> 2, "abcd" -> 1))
   }
 }
