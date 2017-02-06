@@ -1,15 +1,18 @@
 package net.zhenglai.quest.akka.test
 
-import scala.concurrent.Await
-
-import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
-import org.scalatest.FunSuite
 import scala.concurrent.duration._
+import scala.concurrent.{ Await, Future }
+import scala.util.Failure
 
-import akka.pattern.pipe
 import akka.actor.ActorSystem
-import akka.stream.{ ActorMaterializer, OverflowStrategy }
+import akka.event.Logging
+import akka.pattern
+import akka.pattern.pipe
+import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
+import akka.stream.testkit.scaladsl.{ TestSink, TestSource }
+import akka.stream.{ ActorMaterializer, Attributes, OverflowStrategy }
 import akka.testkit.TestProbe
+import org.scalatest.FunSuite
 
 // It is important to keep your data processing pipeline
 // as separate sources, flows and sinks. This makes them easily testable
@@ -81,7 +84,8 @@ class StreamTest extends FunSuite {
     ref ! 1
     ref ! 2
     ref ! 3
-    ref ! akka.actor.Status.Success("done")
+    ref ! akka.actor.Status.Success("done") // todo: complete the stream?
+    ref ! 4 //
 
     val result = Await.result(future, 3 seconds)
     assert(result == "123")
@@ -90,4 +94,77 @@ class StreamTest extends FunSuite {
     // received elements, we can use Source.actorRef and have
     // full control over elements to be sent.
   }
+
+  test("test with akka-stream-testkit") {
+    // test sink
+    val sourceUnderTest = Source(1 to 4)
+      .filter(_ % 2 == 0)
+      .map(_ * 2)
+
+    sourceUnderTest
+      .runWith(TestSink.probe[Int])
+      .request(2)
+      .expectNext(4, 8)
+      .expectComplete()
+
+    // test source
+    val sinkUnderTest = Sink.cancelled
+    TestSource.probe[Int]
+      .toMat(sinkUnderTest)(Keep.left)
+      .run()
+      .expectCancellation()
+
+
+    // test error conditions
+    val sinkHeadUnderTest = Sink.head[Int]
+    val (probe, future) = TestSource.probe[Int]
+      .toMat(sinkHeadUnderTest)(Keep.both)
+      .run()
+    probe.sendError(new RuntimeException("boom"))
+    Await.ready(future, 3 seconds)
+    val Failure(exception) = future.value.get
+    assert(exception.getMessage == "boom")
+  }
+
+  test("test flow with aka-stream-testkit") {
+    val flowUnderTest = Flow[Int]
+      .mapAsyncUnordered(2) { sleep =>
+        pattern.after(10.millis * sleep, using = system.scheduler)(Future.successful(sleep))
+      }
+
+    val (pub, sub) = TestSource.probe[Int]
+      .via(flowUnderTest)
+      .toMat(TestSink.probe[Int])(Keep.both)
+      .run()
+
+    sub.request(n = 3)
+    pub.sendNext(3)
+    pub.sendNext(2)
+    pub.sendNext(1)
+    sub.expectNextUnordered(1, 2, 3)
+    pub.sendError(new Exception("boom wow!"))
+    val ex = sub.expectError()
+    assert(ex.getMessage.contains("boom wow!"))
+  }
+
+  // For testing, it is possible to enable a special stream execution mode
+  // that exercises concurrent execution paths more aggressively
+  // (at the cost of reduced performance) and therefore helps exposing
+  // race conditions in tests.
+  // akka.stream.materializer.debug.fuzzing-mode = on
+
+  test("logging elements") {
+    val src = Source(1 to 4)
+    val loggedSrc = src.map { elem => println(elem); elem }
+    val loggedSrc2 = src.log("before-map")
+      .withAttributes(Attributes.logLevels(onElement = Logging.WarningLevel))
+      .map(identity)
+    val sub = loggedSrc2.runWith(TestSink.probe[Int])
+    sub.requestNext(1)
+    sub.requestNext(2)
+    sub.requestNext(3)
+    sub.requestNext(4)
+    sub.expectComplete()
+  }
+
 }
