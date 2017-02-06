@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicLong
 import scala.concurrent.Future
 
 import akka.Done
+import akka.kafka.ConsumerMessage.CommittableOffsetBatch
 import akka.kafka.Subscriptions
 import akka.kafka.scaladsl.Consumer
 import akka.stream.scaladsl.Sink
@@ -39,6 +40,53 @@ class Rocket {
 }
 
 object ConsumerMain extends App with Environment {
+
+  //  externalOffsetStorageDemo()
+  //  offsetStorageInKafka()
+  batchCommitOffset()
+
+
+  private[this] def batchCommitOffset() = {
+    val db = new DB
+    val done = Consumer.committableSource(
+      consumerSettings.withGroupId("gid6"),
+      Subscriptions.topics("topic1")
+    )
+      .mapAsync(1) { msg =>
+        db.update(msg.record.value).map(_ => msg.committableOffset)
+      }
+      // it will only aggregate elements into batches if
+      // the downstream consumer is slower than the upstream producer.
+      .batch(max = 20, first => CommittableOffsetBatch.empty.updated(first)) { (batch, elem) => batch.updated(elem) }
+      .mapAsync(3) {_.commitScaladsl()}
+      .runWith(Sink.ignore)
+  }
+
+  private[this] def offsetStorageInKafka() = {
+
+    // Compared to auto-commit this gives exact control of when
+    // a message is considered consumed.
+
+    // This is useful when “at-least once delivery” is desired,
+    // as each message will likely be delivered one time but in
+    // failure cases could be duplicated.
+    val db = new DB
+    val done = Consumer.committableSource(
+      consumerSettings.withGroupId("gid5"),
+      Subscriptions.topics("topic1")
+    )
+      .mapAsync(1) { msg =>
+        println(s"consuming ${msg.record.value}:${msg.committableOffset}")
+        db.update(msg.record.value).map(_ => msg)
+      }
+      .mapAsync(1) { msg =>
+        msg.committableOffset.commitScaladsl()
+      }
+      .runWith(Sink.ignore)
+    // The above example uses separate mapAsync stages for processing and committing.
+    // This guarantees that for parallelism higher than 1 we will keep correct
+    // ordering of messages sent for commit.
+  }
 
   def externalOffsetStorageDemo() = {
     val db = new DB
