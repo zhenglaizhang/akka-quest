@@ -39,3 +39,7 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http-jackson" % "10.0.2",
   "com.typesafe.akka" %% "akka-http-xml" % "10.0.2"
 )
+
+libraryDependencies ++= Seq(
+  "com.typesafe.akka" %% "akka-stream-kafka" % "0.13"
+)

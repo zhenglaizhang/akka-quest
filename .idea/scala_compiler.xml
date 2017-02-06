@@ -4,5 +4,8 @@
     <profile name="SBT 1" modules="akka-quest">
       <option name="postfixOps" value="true" />
     </profile>
+    <profile name="SBT 2" modules="akk-quest">
+      <option name="postfixOps" value="true" />
+    </profile>
   </component>
 </project>
