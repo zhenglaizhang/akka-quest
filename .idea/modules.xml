@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/akk-quest.iml" filepath="$PROJECT_DIR$/.idea/modules/akk-quest.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/akk-quest-build.iml" filepath="$PROJECT_DIR$/.idea/modules/akk-quest-build.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/akka-quest.iml" filepath="$PROJECT_DIR$/.idea/modules/akka-quest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/akka-quest-build.iml" filepath="$PROJECT_DIR$/.idea/modules/akka-quest-build.iml" />
     </modules>
   </component>
 </project>
