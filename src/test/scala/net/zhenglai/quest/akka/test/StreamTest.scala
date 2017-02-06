@@ -167,4 +167,25 @@ class StreamTest extends FunSuite {
     sub.expectComplete()
   }
 
+  test("limit or take") {
+    val MAX_ALLOWED_SIZE = 10
+    val src = Source(1 to 100)
+    val limited: Future[Seq[Int]] =
+      src.log("wow")
+        .withAttributes(Attributes.logLevels(onElement = Logging.InfoLevel))
+        .map { elem => println(elem); elem }
+        .limit(MAX_ALLOWED_SIZE)
+        .runWith(Sink.seq)
+    println(Await.result(limited.failed, 1 second))
+    // StreamLimitReachedException
+
+    val ignoreOverflowProbe =
+      src.take(MAX_ALLOWED_SIZE)
+        .log("foo")
+        .withAttributes(Attributes.logLevels(onElement = Logging.InfoLevel, onFailure = Logging.WarningLevel))
+        .runWith(TestSink.probe[Int])
+    ignoreOverflowProbe.request(100)
+    ignoreOverflowProbe.expectNextN(1 to 10)
+    ignoreOverflowProbe.expectComplete()
+  }
 }
