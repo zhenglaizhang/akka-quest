@@ -17,5 +17,4 @@ trait Environment {
     ConsumerSettings(system, new ByteArrayDeserializer, new StringDeserializer)
       .withBootstrapServers("localhost:9092")
       .withClientId("cid1")
-      .withGroupId("gid1")
 }

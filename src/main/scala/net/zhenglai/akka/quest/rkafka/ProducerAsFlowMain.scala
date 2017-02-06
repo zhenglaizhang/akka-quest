@@ -13,10 +13,11 @@ object ProducerAsFlowMain extends App with Environment {
 
   //  simple
 
+  // TODO: fix it
   complex
 
   private[this] def complex = {
-    Consumer.committableSource(consumerSettings, Subscriptions.topics("topic1"))
+    Consumer.committableSource(consumerSettings.withGroupId("gid2"), Subscriptions.topics("topic1"))
       .map { msg =>
         println(s"topic1 -> topic4: $msg")
         ProducerMessage.Message(

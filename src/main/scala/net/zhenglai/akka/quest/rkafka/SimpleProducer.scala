@@ -23,7 +23,7 @@ object SimpleProducer extends App with Environment {
 
   println("demo Producer.commitableSink")
   val done2 = Consumer
-    .committableSource(consumerSettings, Subscriptions.topics("topic1"))
+    .committableSource(consumerSettings.withGroupId("gid1"), Subscriptions.topics("topic1"))
     .map { msg =>
       println(s"topic1 -> topic2: $msg")
       ProducerMessage.Message(new ProducerRecord[Array[Byte], String](
