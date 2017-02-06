@@ -44,7 +44,8 @@ object ConsumerMain extends App with Environment {
 
   //  externalOffsetStorageDemo()
   //  offsetStorageInKafka()
-  batchCommitOffset2()
+  //  batchCommitOffset2()
+  atMostOnce()
 
 
   private[this] def batchCommitOffset() = {
@@ -60,6 +61,22 @@ object ConsumerMain extends App with Environment {
       // the downstream consumer is slower than the upstream producer.
       .batch(max = 20, first => CommittableOffsetBatch.empty.updated(first)) { (batch, elem) => batch.updated(elem) }
       .mapAsync(3) {_.commitScaladsl()}
+      .runWith(Sink.ignore)
+  }
+
+  private[this] def atMostOnce() = {
+    // If you commit the offset before processing the message
+    // you get “at-most once delivery” semantics, and for that there is a
+    // Consumer.atMostOnceSource. However, atMostOnceSource commits the offset
+    // for each message and that is rather slow, batching of commits is recommended.
+    val rocket = new Rocket
+    val done = Consumer.atMostOnceSource(
+      consumerSettings.withGroupId("gid8"),
+      Subscriptions.topics("topic1")
+    )
+      .mapAsync(1) { record =>
+        rocket.launch(record.value)
+      }
       .runWith(Sink.ignore)
   }
 
