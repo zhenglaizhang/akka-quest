@@ -7,9 +7,9 @@ import scala.util.Failure
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.pattern.pipe
-import akka.stream.scaladsl.{ Compression, Flow, Framing, GraphDSL, Keep, RunnableGraph, Sink, Source, Zip, ZipWith }
+import akka.stream.scaladsl.{ Balance, Compression, Flow, Framing, GraphDSL, Keep, Merge, RunnableGraph, Sink, Source, Zip, ZipWith }
 import akka.stream.testkit.scaladsl.{ TestSink, TestSource }
-import akka.stream.{ ActorMaterializer, Attributes, ClosedShape, OverflowStrategy }
+import akka.stream._
 import akka.testkit.TestProbe
 import akka.util.ByteString
 import akka.{ NotUsed, pattern }
@@ -276,7 +276,7 @@ class StreamTest extends FunSuite {
       elements ~> zip.in0
       triggerSource ~> zip.in1
 
-      zip.out ~> Flow[(Message, Trigger)].map(_._1) ~ sink
+      zip.out ~> Flow[(Message, Trigger)].map(_._1) ~> sink
       ClosedShape
     })
 
@@ -289,5 +289,23 @@ class StreamTest extends FunSuite {
       zip.out ~> sink
       ClosedShape
     })
+  }
+
+  test("balancing jobs to fixed pool of workers") {
+    def balancer[In, Out](worker: Flow[In, Out, Any], workerCount: Int): Flow[In, Out, NotUsed] = {
+      Flow.fromGraph(GraphDSL.create() { implicit b =>
+        import GraphDSL.Implicits._
+        val balancer = b.add(Balance[In](workerCount, waitForAllDownstreams = true))
+        val merge = b.add(Merge[Out](workerCount))
+
+        for (_ <- 1 to workerCount) {
+          balancer ~> worker.async ~> merge
+        }
+
+        FlowShape(balancer.in, merge.out)
+      })
+    }
+
+    // val processedJobs: Source[Result, NotUsed] = myJobs.via(balancer(worker, 3))
   }
 }
