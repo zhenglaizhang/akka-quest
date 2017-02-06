@@ -5,7 +5,6 @@ import scala.concurrent.{ Await, Future }
 import scala.util.Failure
 
 import akka.actor.ActorSystem
-import akka.cluster.ddata.Replicator.Internal.DeletedData.T
 import akka.event.Logging
 import akka.pattern.pipe
 import akka.stream.scaladsl.{ Balance, Compression, Flow, Framing, GraphDSL, Keep, Merge, RunnableGraph, Sink, Source, Zip, ZipWith }
