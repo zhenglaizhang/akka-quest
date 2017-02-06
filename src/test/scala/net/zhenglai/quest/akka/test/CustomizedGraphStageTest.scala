@@ -278,4 +278,5 @@ class CustomizedGraphStageTest extends FunSuite {
     sub.request(10)
       .expectNextN(List(3, 3, 4, 4, 5, 5))
   }
+  // todo: http://doc.akka.io/docs/akka/2.4/scala/stream/stream-customize.html#graphstage-scala
 }
