@@ -7,9 +7,9 @@ import scala.util.Failure
 import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.pattern.pipe
-import akka.stream.scaladsl.{ Compression, Flow, Framing, Keep, Sink, Source }
+import akka.stream.scaladsl.{ Compression, Flow, Framing, GraphDSL, Keep, RunnableGraph, Sink, Source, Zip, ZipWith }
 import akka.stream.testkit.scaladsl.{ TestSink, TestSource }
-import akka.stream.{ ActorMaterializer, Attributes, OverflowStrategy }
+import akka.stream.{ ActorMaterializer, Attributes, ClosedShape, OverflowStrategy }
 import akka.testkit.TestProbe
 import akka.util.ByteString
 import akka.{ NotUsed, pattern }
@@ -260,5 +260,34 @@ class StreamTest extends FunSuite {
 
     sub.request(10L)
       .expectNextUnorderedN(List("abc" -> 2, "abcd" -> 1))
+  }
+
+  test("trigger the flow of elements programmatically") {
+    // even if the stream would be able to flow (not being backpressured)
+    // we want to hold back elements until a trigger signal arrives.
+    final case class Message()
+    final case class Trigger()
+    val elements = Source.single(Message())
+    val triggerSource = Source.single(Trigger())
+    val sink = Sink.seq[Message]
+    val graph = RunnableGraph.fromGraph(GraphDSL.create() { implicit b =>
+      import GraphDSL.Implicits._
+      val zip = b.add(Zip[Message, Trigger]())
+      elements ~> zip.in0
+      triggerSource ~> zip.in1
+
+      zip.out ~> Flow[(Message, Trigger)].map(_._1) ~ sink
+      ClosedShape
+    })
+
+    val graph2 = RunnableGraph.fromGraph(GraphDSL.create() { implicit b =>
+      import GraphDSL.Implicits._
+      //  ZipWith is a generalization of zipping.
+      val zip = b.add(ZipWith((msg: Message, trigger: Trigger) => msg))
+      elements ~> zip.in0
+      triggerSource ~> zip.in1
+      zip.out ~> sink
+      ClosedShape
+    })
   }
 }
