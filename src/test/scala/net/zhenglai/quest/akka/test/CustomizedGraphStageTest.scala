@@ -13,6 +13,7 @@ import org.scalatest.FunSuite
 import scala.concurrent.duration._
 
 import akka.actor.ActorSystem
+import akka.stream.testkit.scaladsl.TestSink
 
 // bidirectional flows
 //  codec stage
@@ -56,6 +57,7 @@ class CustomizedGraphStageTest extends FunSuite {
     // simply integrate any other serialization library that turns an object into a sequence of bytes
   }
 
+  // todo http://doc.akka.io/docs/akka/2.4/scala/stream/stream-customize.html#graphstage-scala
   test("customized NumbersSource") {
     class NumbersSource extends GraphStage[SourceShape[Int]] {
       // define the (sole) output port of this stage
@@ -78,6 +80,8 @@ class CustomizedGraphStageTest extends FunSuite {
           @scala.throws[Exception](classOf[Exception])
           override def onPull(): Unit = {
             push(out, counter)
+            // complete(out)
+            // fail(err)
             counter += 1
           }
         })
@@ -116,5 +120,80 @@ class CustomizedGraphStageTest extends FunSuite {
     val sinkGraph: Graph[SinkShape[Int], NotUsed] = new StdoutSink
     val stdoutSink: Sink[Int, NotUsed] = Sink.fromGraph(sinkGraph)
     Source(List(1, 2, 3)).runWith(stdoutSink)
+  }
+
+  test("customized map") {
+    class Map[A, B](f: A => B) extends GraphStage[FlowShape[A, B]] {
+      val in = Inlet[A]("Map.in")
+      val out = Outlet[B]("Map.out")
+
+      override val shape = FlowShape.of(in, out)
+
+      override def createLogic(inheritedAttributes: Attributes) = new GraphStageLogic(shape) {
+        setHandler(in, new InHandler {
+          @scala.throws[Exception](classOf[Exception])
+          override def onPush() = {
+            push(out, f(grab(in)))
+          }
+        })
+
+        setHandler(out, new OutHandler {
+          @scala.throws[Exception](classOf[Exception])
+          override def onPull() = {
+            pull(in)
+          }
+        })
+      }
+    }
+
+    def flowGraph[A, B](f: A => B): Graph[FlowShape[A, B], NotUsed] = new Map[A, B](f)
+
+    def mapFlow[A, B](f: A => B): Flow[A, B, NotUsed] = Flow.fromGraph(flowGraph(f))
+
+    val sub = Source(1 to 2)
+      .via(mapFlow(_ * 2))
+      .runWith(TestSink.probe)
+    sub.request(4)
+      .expectNextN(List(2, 4))
+  }
+
+  test("customized filter") {
+    class Filter[A](p: A => Boolean) extends GraphStage[FlowShape[A, A]] {
+
+      val in = Inlet[A]("Filter.in")
+      val out = Outlet[A]("Filter.in")
+
+      override def shape = FlowShape.of(in, out)
+
+      @scala.throws[Exception](classOf[Exception])
+      override def createLogic(inheritedAttributes: Attributes) = new GraphStageLogic(shape) {
+        setHandler(in, new InHandler {
+          @scala.throws[Exception](classOf[Exception])
+          override def onPush() = {
+            val elem = grab(in)
+            if (p(elem)) push(out, elem)
+            else {
+              println("filtering out: " + elem)
+              pull(in)
+            }
+          }
+        })
+
+        setHandler(out, new OutHandler {
+          @scala.throws[Exception](classOf[Exception])
+          override def onPull() = pull(in)
+        })
+      }
+    }
+
+    def flowGraph[A](p: A => Boolean): Graph[FlowShape[A, A], NotUsed] = new Filter(p)
+
+    def filterFlow[A](p: A => Boolean) = Flow.fromGraph(flowGraph(p))
+
+    val sub = Source(1 to 5)
+      .via(filterFlow(_ % 2 != 0))
+      .runWith(TestSink.probe)
+    sub.request(10)
+      .expectNextN(List(1, 3, 5))
   }
 }
