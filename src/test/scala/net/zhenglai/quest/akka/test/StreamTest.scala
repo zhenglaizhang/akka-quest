@@ -8,10 +8,11 @@ import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.pattern
 import akka.pattern.pipe
-import akka.stream.scaladsl.{ Flow, Keep, Sink, Source }
+import akka.stream.scaladsl.{ Compression, Flow, Keep, Sink, Source }
 import akka.stream.testkit.scaladsl.{ TestSink, TestSource }
 import akka.stream.{ ActorMaterializer, Attributes, OverflowStrategy }
 import akka.testkit.TestProbe
+import akka.util.ByteString
 import org.scalatest.FunSuite
 
 // It is important to keep your data processing pipeline
@@ -187,5 +188,22 @@ class StreamTest extends FunSuite {
     ignoreOverflowProbe.request(100)
     ignoreOverflowProbe.expectNextN(1 to 10)
     ignoreOverflowProbe.expectComplete()
+  }
+
+  test("compression") {
+    val uncompressed = Source(List("abc" * 12))
+      .map(ByteString(_))
+      .via(Compression.gzip)
+//      .map(_.utf8String)
+      .log("gzipped")
+//      .map(ByteString(_))
+      .via(Compression.gunzip())
+      .map(_.utf8String)
+      .log("gunzipped")
+      .withAttributes(Attributes.logLevels(onElement = Logging.InfoLevel))
+      .runWith(TestSink.probe)
+
+    uncompressed
+      .requestNext("abc" * 12)
   }
 }
