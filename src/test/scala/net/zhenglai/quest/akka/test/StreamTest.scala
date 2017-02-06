@@ -5,6 +5,7 @@ import scala.concurrent.{ Await, Future }
 import scala.util.Failure
 
 import akka.actor.ActorSystem
+import akka.cluster.ddata.Replicator.Internal.DeletedData.T
 import akka.event.Logging
 import akka.pattern.pipe
 import akka.stream.scaladsl.{ Balance, Compression, Flow, Framing, GraphDSL, Keep, Merge, RunnableGraph, Sink, Source, Zip, ZipWith }
@@ -307,5 +308,17 @@ class StreamTest extends FunSuite {
     }
 
     // val processedJobs: Source[Result, NotUsed] = myJobs.via(balancer(worker, 3))
+  }
+
+  test("dropping elements") {
+    // When the upstream is faster, the reducing process of the conflate starts.
+    // Our reducer function simply takes the freshest element.
+    // This in a simple dropping operation.
+    def droppyStream[T]: Flow[T, T, NotUsed] =
+      Flow[T].conflate((last, cur) => cur)
+  }
+
+  test("dropping broadcast") {
+
   }
 }
