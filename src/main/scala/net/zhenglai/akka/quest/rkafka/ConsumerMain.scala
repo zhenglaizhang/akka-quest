@@ -3,6 +3,7 @@ package net.zhenglai.akka.quest.rkafka
 import java.util.concurrent.atomic.AtomicLong
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 import akka.Done
 import akka.kafka.ConsumerMessage.CommittableOffsetBatch
@@ -43,7 +44,7 @@ object ConsumerMain extends App with Environment {
 
   //  externalOffsetStorageDemo()
   //  offsetStorageInKafka()
-  batchCommitOffset()
+  batchCommitOffset2()
 
 
   private[this] def batchCommitOffset() = {
@@ -58,6 +59,21 @@ object ConsumerMain extends App with Environment {
       // it will only aggregate elements into batches if
       // the downstream consumer is slower than the upstream producer.
       .batch(max = 20, first => CommittableOffsetBatch.empty.updated(first)) { (batch, elem) => batch.updated(elem) }
+      .mapAsync(3) {_.commitScaladsl()}
+      .runWith(Sink.ignore)
+  }
+
+  private[this] def batchCommitOffset2() = {
+    val db = new DB
+    val done = Consumer.committableSource(
+      consumerSettings.withGroupId("gid7"),
+      Subscriptions.topics("topic1")
+    )
+      .mapAsync(1) { msg =>
+        db.update(msg.record.value).map(_ => msg.committableOffset)
+      }
+      .groupedWithin(10, 5 seconds)
+      .map(g => g.foldLeft(CommittableOffsetBatch.empty) { (batch, elem) => batch.updated(elem) })
       .mapAsync(3) {_.commitScaladsl()}
       .runWith(Sink.ignore)
   }
