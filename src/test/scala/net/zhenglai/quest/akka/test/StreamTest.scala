@@ -6,13 +6,13 @@ import scala.util.Failure
 
 import akka.actor.ActorSystem
 import akka.event.Logging
-import akka.{ NotUsed, pattern }
 import akka.pattern.pipe
 import akka.stream.scaladsl.{ Compression, Flow, Framing, Keep, Sink, Source }
 import akka.stream.testkit.scaladsl.{ TestSink, TestSource }
 import akka.stream.{ ActorMaterializer, Attributes, OverflowStrategy }
 import akka.testkit.TestProbe
 import akka.util.ByteString
+import akka.{ NotUsed, pattern }
 import org.scalatest.FunSuite
 
 // It is important to keep your data processing pipeline
@@ -27,7 +27,7 @@ class StreamTest extends FunSuite {
     groupKey: (In) => K,
     map: (In) => Out
   )(reduce: (Out, Out) => Out): Flow[In, (K, Out), NotUsed] = {
-    Flow[In]
+    Flow[In] // sequential in reading the overall input stream, NOT parallelism
       .groupBy[K](maximumGroupSize, groupKey)
       .map(e => groupKey(e) -> map(e))
       .reduce((l, r) => l._1 -> reduce(l._2, r._2))
@@ -229,7 +229,7 @@ class StreamTest extends FunSuite {
       .withAttributes(Attributes.logLevels(onElement = Logging.InfoLevel))
       .runWith(TestSink.probe)
     sub.request(100)
-      .expectNextN(List("abc", "abc", "abcd", "abcde", "wow"))
+      .expectNextN(List("abc\nabc", "abcd\nabcde", "wow"))
   }
 
   test("reduce by key") {
