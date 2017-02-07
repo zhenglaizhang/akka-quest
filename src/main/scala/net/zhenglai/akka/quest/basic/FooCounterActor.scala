@@ -25,6 +25,11 @@ class FooCounterActor extends Actor with ActorLogging {
 // Caching is not state
 // if an actor is used for caching, a single thread for both reads and writes becomes absolutely necessary which is less optimal compared with Future caching
 
+
+// Futures are composable
+// val result = fromRedis recoverWith { case _ => fromScratch }
+//  result.onFailure { ... } // error handling
+
 class FooCounterActorMain extends App {
 
 }
