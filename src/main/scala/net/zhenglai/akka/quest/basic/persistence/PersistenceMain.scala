@@ -42,6 +42,9 @@ case class ExampleState(events: List[String] = Nil) {
 // The state of the ExamplePersistentActor is a list of persisted event data contained in ExampleState.
 class ExamplePersistentActor extends PersistentActor {
 
+  // Id of the persistent entity for which messages should be replayed.
+  // Must be unique to a given entity in the journal(database table/keyspace)
+  // message-replaying behavior depends on the persistenceId to query messages
   override def persistenceId = "sample-id-1"
 
   var state = ExampleState()
@@ -58,7 +61,7 @@ class ExamplePersistentActor extends PersistentActor {
     case evt: Evt => updateState(evt)
     case SnapshotOffer(_, snapshot: ExampleState) => state = snapshot
     case RecoveryCompleted =>
-      println("recovery completed")
+      println("recovery completed (start or restart)")
     // perform init right after recovery, before any othre messages
   }
 
@@ -67,6 +70,10 @@ class ExamplePersistentActor extends PersistentActor {
     toSequenceNr = Long.MaxValue,
     replayMax = Long.MaxValue
   )
+
+  // Called whenever a message replay fails. By default it logs the error.
+  // The actor is always stopped after this method has been invoked.
+  override def onRecoveryFailure(cause: Throwable, event: Option[Any]) = super.onRecoveryFailure(cause, event)
 
   // The persist method persists events asynchronously and the event handler is executed for successfully persisted events. Successfully
   // persisted events are internally sent back to the persistent actor as individual messages that trigger event handler executions. An
@@ -89,6 +96,10 @@ class ExamplePersistentActor extends PersistentActor {
       }
     case "snap" => saveSnapshot(state)
     case "print" => println(state)
+    // trigger restart & recovery
+    case "boom" => throw new RuntimeException("boom")
+    case SaveSnapshotSuccess(meta) =>
+      println(s"SaveSnapshotSuccess($meta)")
   }
 
 }
@@ -103,6 +114,7 @@ object PersistenceMain extends App {
   persistentActor ! "print"
   persistentActor ! Cmd("foo")
   persistentActor ! Cmd("baz")
+  persistentActor ! "boom"
   persistentActor ! Cmd("bar")
   persistentActor ! "snap"
   persistentActor ! Cmd("buzz")
