@@ -77,6 +77,7 @@ def sayHello4(msg: String)(implicit log: String => Unit) = log("Hello World with
 
 implicit val stdLogger: String => Unit = System.out.println
 sayHello4("wow")
+
 // In general, you should only do this if you are passing it around a lot: into dozens of callsites at least. Nevertheless, in a large program that's not unreasonable, especially for common things like logging.
 // However, if the use sites are all relatively localized, you should prefer to use Constructor Injection rather than creating a new implicit parameter just for one small section of your code. Reserve implicit parameters for the cases where the callsites are scattered and constructor injection into all the disparate classes becomes tedious.
 
@@ -88,3 +89,27 @@ sayHello4("wow")
 // "Setter Injection" refers to instantiating an object, and then setting some variable onto that object which it will use when you call methods on it.
 
 //As described in the section on Immutability & Mutability, don't do that: mutable state should only be used to model mutable things, and not as an ad-hoc way of passing parameters to a function call.
+
+
+// if you know there is multiple things that can go wrong, use a Simple Sealed Trait
+
+sealed trait Result
+
+object Result {
+
+  case class Success(value: String) extends Result
+
+  case class Failure(msg: String) extends Result
+
+  case class Error(msg: String) extends Result
+
+}
+
+def functionMayFail: Result = Result.Success("success")
+
+functionMayFail match {
+  case Result.Success(s) => println(s)
+  case Result.Failure(s) => println(s)
+  case Result.Error(s) => println(s)
+}
+
