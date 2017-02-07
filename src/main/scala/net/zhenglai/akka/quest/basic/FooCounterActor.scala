@@ -30,6 +30,7 @@ class FooCounterActor extends Actor with ActorLogging {
 // val result = fromRedis recoverWith { case _ => fromScratch }
 //  result.onFailure { ... } // error handling
 
+// Why you shouldn't use Futures for concurrency: good luck controlling that.
 class FooCounterActorMain extends App {
 
 }
