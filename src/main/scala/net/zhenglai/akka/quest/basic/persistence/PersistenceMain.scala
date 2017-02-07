@@ -50,7 +50,7 @@ class ExamplePersistentActor extends PersistentActor {
 
   def numEvents = state.size
 
-  // By default, a persistent actor is automatically recovered on start and on restart by replaying journaled messages. New messages sent
+  // By default, a persistent actor is automatically recovered on `start` and on `restart` by replaying journaled messages. New messages sent
   // to a persistent actor during recovery do not interfere with replayed messages. They are cached and received by a persistent actor
   // after recovery phase completes.
   override def receiveRecover: Receive = {
@@ -100,6 +100,7 @@ object PersistenceMain extends App {
 
   val persistentActor = system.actorOf(Props[ExamplePersistentActor], "persistentActor")
 
+  persistentActor ! "print"
   persistentActor ! Cmd("foo")
   persistentActor ! Cmd("baz")
   persistentActor ! Cmd("bar")
