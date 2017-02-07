@@ -8,11 +8,57 @@
 * Patterns
 
 
+#### Akka Streams vs Akka Actor
+
+* Akka Streams is all about back-pressure but actor messaging is fire-and-forget without any back-pressure. 
+* Adding back-pressure to actor messaging must still be handled on the application level using techniques for message flow control, such as acknowledgments, work-pulling, throttling.
+* 
+
+### Reactive Streams
+  * Streams are Ubiquitous
+    * ingesting, transforming and emitting data
+    * request & responses
+    * Moving Bulk Data over the Network
+    * bad connection quality - need for back-pressure
+  * Problem: Getting `Data` across an `Asynchronous Boundary` without running `OutOfMemory`
+  * Reactive Streams is an initiative to provide a standard for asynchronous stream processing with non-blocking back pressure on the JVM
+  * Supply and Demand 
+    * data items flow downstream
+    * demand flows upstream
+    * data items flows only when there is demand
+      * recipient is in control of incoming data rate
+      * data in flight in bounded by signaled demand
+      Publisher  <--(demand)-- Subscriber
+                 -- (data) -->
+  * Dynamic Push-Pull
+    * `push` behavior when consumer is faster
+    * `pull` behavior when producer is faster
+    * switches automatically between these
+    * batching demand allows batching data
+  * Back-Pressure is Contagious
+    * C is slow
+      * B must slow down
+        * A must slow down
+    `A -> B -> C`
+  * Back-Pressure can be Propagated
+    * TCP for example has it built in
+
+> Reactive Streams
+   * asynchronous non-blocking data flow
+   * asynchronous non-blocking demand flow
+   * minimal coordination and contention
+   * message passing allows for distribution across applications, nodes, CPUs, threads, actors, ...
+   * http://reactive-streams.org/ 
+  
+  
 ### AKKA
   * Kafka + Akka === BFF (best friend forever)
     * Akka is Arbitrary processing
     * Kafka is somewhat more than a message queue, but very focused on "the log"
+      * A publish-subscribe messaging rethought as a distributed commit log
     * Spark shines with it's data-science focus
+  * Reactive Kafka
+    * consumer/producer are RS Subscriber/Publisher
     
     
 ### Streams <=> Actors inter-op
