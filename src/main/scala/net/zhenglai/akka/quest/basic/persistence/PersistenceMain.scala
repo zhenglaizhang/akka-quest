@@ -1,6 +1,8 @@
 package net.zhenglai.akka.quest.basic.persistence
 
+import akka.actor.{ ActorSystem, Props }
 import akka.persistence.{ PersistentActor, SnapshotOffer }
+import akka.stream.ActorMaterializer
 
 // The key concept behind Akka persistence is that only changes to an actor's internal state
 // are persisted but never its current state directly (except for optional snapshots).
@@ -53,12 +55,23 @@ class ExamplePersistentActor extends PersistentActor {
     case SnapshotOffer(_, snapshot: ExampleState) => state = snapshot
   }
 
+  // The persist method persists events asynchronously and the event handler is executed for successfully persisted events. Successfully
+  // persisted events are internally sent back to the persistent actor as individual messages that trigger event handler executions. An
+  // event handler may close over persistent actor state and mutate it. The sender of a persisted event is the sender of the
+  // corresponding command. This allows event handlers to reply to the sender of a command (not shown).
   override def receiveCommand: Receive = {
     case Cmd(data) =>
       // wow, validating the Cmd per current events state, and extract safe Evt
+
+      // When persisting events with persist it is guaranteed that the persistent actor will not receive further commands between the
+      // persist call and the execution(s) of the associated event handler.
+      // onPersistFailure
+      // onPersistRejected
       persist(Evt(s"$data-$numEvents"))(updateState)
       persist(Evt(s"$data-${numEvents + 1}")) { event =>
         updateState(event)
+
+        // notifying others about successful state changes by publishing events.
         context.system.eventStream.publish(event)
       }
     case "snap" => saveSnapshot(state)
@@ -68,5 +81,19 @@ class ExamplePersistentActor extends PersistentActor {
 }
 
 object PersistenceMain extends App {
+  implicit val system: ActorSystem = ActorSystem()
+  implicit val mat: ActorMaterializer = ActorMaterializer()
+  implicit val ec = system.dispatcher
 
+  val persistentActor = system.actorOf(Props[ExamplePersistentActor], "persistentActor")
+
+  persistentActor ! Cmd("foo")
+  persistentActor ! Cmd("baz")
+  persistentActor ! Cmd("bar")
+  persistentActor ! "snap"
+  persistentActor ! Cmd("buzz")
+  persistentActor ! "print"
+
+  Thread.sleep(10000)
+  system.terminate()
 }
