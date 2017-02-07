@@ -1,7 +1,7 @@
 package net.zhenglai.akka.quest.basic.persistence
 
 import akka.actor.{ ActorSystem, Props }
-import akka.persistence.{ PersistentActor, Recovery, SnapshotOffer, SnapshotSelectionCriteria }
+import akka.persistence._
 import akka.stream.ActorMaterializer
 
 // The key concept behind Akka persistence is that only changes to an actor's internal state
@@ -57,6 +57,9 @@ class ExamplePersistentActor extends PersistentActor {
     // Accessing the sender() for replayed messages will always result in a deadLetters reference
     case evt: Evt => updateState(evt)
     case SnapshotOffer(_, snapshot: ExampleState) => state = snapshot
+    case RecoveryCompleted =>
+      println("recovery completed")
+    // perform init right after recovery, before any othre messages
   }
 
   override def recovery = Recovery(
@@ -75,7 +78,7 @@ class ExamplePersistentActor extends PersistentActor {
 
       // When persisting events with persist it is guaranteed that the persistent actor will not receive further commands between the
       // persist call and the execution(s) of the associated event handler.
-      // onPersistFailure
+      // onPersistFailure => logging and stop the actor
       // onPersistRejected
       persist(Evt(s"$data-$numEvents"))(updateState)
       persist(Evt(s"$data-${numEvents + 1}")) { event =>
