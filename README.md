@@ -8,6 +8,17 @@
 * Patterns
 
 
+### AKKA
+  * Kafka + Akka === BFF (best friend forever)
+    * Akka is Arbitrary processing
+    * Kafka is somewhat more than a message queue, but very focused on "the log"
+    * Spark shines with it's data-science focus
+    
+    
+### Streams <=> Actors inter-op
+  * Source.actorRef & Sink.actorRef (no back-pressure)
+  * Source.queue & Sink.actorRefWithAct (safe)
+
 * Mats
 
   * Don't use actors for concurrency. Instead, use actors for state and use futures for concurrency.
