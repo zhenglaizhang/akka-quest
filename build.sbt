@@ -47,6 +47,12 @@ libraryDependencies ++= Seq(
 
 // LevelDB based plugin
 libraryDependencies ++= Seq(
-  "org.iq80.leveldb"            % "leveldb"          % "0.7",
-  "org.fusesource.leveldbjni"   % "leveldbjni-all"   % "1.8"
+  "org.iq80.leveldb" % "leveldb" % "0.7",
+  "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8"
+)
+
+libraryDependencies ++= Seq(
+  "com.typesafe.slick" %% "slick" % "3.1.1",
+  "com.h2database" % "h2" % "1.4.185",
+  "ch.qos.logback" % "logback-classic" % "1.1.2"
 )
