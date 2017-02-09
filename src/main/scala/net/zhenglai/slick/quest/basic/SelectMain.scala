@@ -23,6 +23,8 @@ object SelectMain extends App {
   )
 
   // Schema for the "message" table
+  // tag => table alias
+  // TODO: Tag??
   final class MessageTable(tag: Tag)
     extends Table[Message](tag, "message") {
     def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
@@ -35,7 +37,7 @@ object SelectMain extends App {
   }
 
   // Base query for querying the message table:
-
+  // select * style query ...
   lazy val messages = TableQuery[MessageTable]
   println(s"{messages.shaped.shape} = ${messages.shaped.shape}")
   println(s"messages.shaped.value = ${messages.shaped.value}")
@@ -43,20 +45,28 @@ object SelectMain extends App {
   val halSays = messages.filter(_.sender === "HAL")
 
   // create an in-memory H2 db
+  // a factory for managing connections and transactions
   val db = Database.forConfig("quest")
+  // slick manage connections & transactions with auto-commit
 
   // helper method for running a query
   def exec[T](program: DBIO[T]): T = Await.result(db.run(program), 2 seconds)
 
   println("Creating `messages` table:")
-  exec(messages.schema.create)
+  println(s"messages.schema.createStatements.mkString = ${messages.schema.createStatements.mkString}")
+  // type DBIO[+R] = DBIOAction[R, NoStream, Effect.All]
+  val createAction: DBIO[Unit] = messages.schema.create
+  exec(createAction) // send action to db
 
   println(s"\nInserting test data")
-  exec(messages ++= freshTestData)
+  // ++= bulk/batch insert
+  // return is optional since some db doesn't guarantee row counts returned
+  val insert: DBIO[Option[Int]] = messages ++= freshTestData
+  println("rows inserted: " + exec(insert))
 
   println(s"\nSelecting all messages:")
   exec(messages.result) foreach println
 
-  println(s"\nSeleecting only messages from HAL:")
+  println(s"\nSelecting only messages from HAL:")
   exec(halSays.result) foreach println
 }
