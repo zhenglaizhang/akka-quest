@@ -208,7 +208,14 @@ object SlickSelectMain extends App {
   println(exec(messages.map(_.content ++ "!").result))
   println(exec(messages.map(_.content + "!").result))
 
+
+  val forceInsertAction = messages forceInsert Message("HAL", "forced insert", 1000L)
+  val q = forceInsertAction andThen (messages += Message("HAL", "another insert")) andThen messages.result
+
+  // insert into "message" ("sender","content","id")  values (?,?,?)
+  println(forceInsertAction.statements.mkString)
+
+  println(exec(q))
+
   Thread.sleep(1000)
-
-
 }
