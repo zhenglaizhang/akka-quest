@@ -175,5 +175,14 @@ object SlickSelectMain extends App {
   messages.filter(_.sender < "HAL")
   messages.filter(m => m.sender >= m.content).result.statements
 
+
+
+
+
+  // ++ method for string concatenation (SQL's || operator):
+  val concat = messages.map(m => m.sender ++ "> " ++ m.content).result
+  println(concat.statements.mkString)
+  println(exec(concat))
+
   Thread.sleep(1000)
 }
