@@ -68,5 +68,9 @@ object SelectMain extends App {
   exec(messages.result) foreach println
 
   println(s"\nSelecting only messages from HAL:")
+  println("selecting sql: " + halSays.result.statements.mkString)
   exec(halSays.result) foreach println
+
+  println(s"\nSelecting ids with messages from HAL:")
+  exec(halSays.map(_.id)) foreach println
 }
