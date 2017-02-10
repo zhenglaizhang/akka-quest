@@ -3,7 +3,10 @@ package net.zhenglai.slick.quest.basic
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
+import slick.dbio.Effect.Read
 import slick.driver.H2Driver.api._
+import slick.profile.FixedSqlAction
+
 
 object SlickSelectMain extends App {
 
@@ -38,6 +41,7 @@ object SlickSelectMain extends App {
 
   // Base query for querying the message table:
   // select * style query ...
+  // todo: why lazy??
   lazy val messages = TableQuery[MessageTable]
   println(s"{messages.shaped.shape} = ${messages.shaped.shape}")
   println(s"messages.shaped.value = ${messages.shaped.value}")
@@ -74,8 +78,14 @@ object SlickSelectMain extends App {
     println("selecting sql: " + halSays.result.statements.mkString)
     exec(halSays.result) foreach println
 
+    val wow: Query[Rep[String], String, Seq] = halSays.map(_.content).filter { content: Rep[String] =>
+      content.like("%new%")
+    }
+
+
     println(s"\nSelecting ids with messages from HAL:")
-    exec(halSays.map(_.id).result) foreach println
+    // TODO: fix it
+//    exec(halSays.map(_.id).filter { id: Rep[Long] => id < 10 }.result) foreach println
 
     // Query is monad, implements map, flatMap, filter and withFilter
     val halSay2 = for {
@@ -88,7 +98,6 @@ object SlickSelectMain extends App {
     exec(halSay2.result)
   }
 
-
   // Like query, DBIOAction is also a monad
 
   // compose queries and actions is to wrap them inside a transaction
@@ -97,9 +106,40 @@ object SlickSelectMain extends App {
       (messages ++= freshTestData) >>
       halSays.result
 
-
   println(s"result: " + exec(actions))
 
+  // SELECT 1 FROM any_existing_table WHERE 1=0
+  println("constant queries: " + Query(1).result.statements.mkString)
+  println("select 1 result: " + exec(Query(1).result))
+
   println(exec(messages += Message("Dave", "I am new message")))
-  println(exec(messages.filter(_.sender === "Dave").result))
+  println(exec(messages.filter { messageTable: MessageTable =>
+    messageTable.sender === "Dave"
+  }.result))
+
+
+  println("result: " + messages.map(m => (m.id, m.sender)).result.statements)
+
+  case class TextOnly(id: Long, content: String)
+
+  val contentQuery = messages.
+    map(m => (m.id, m.content) <> (TextOnly.tupled, TextOnly.unapply))
+  println(contentQuery.result.statements.mkString)
+  println(s"exec(contentQuery) = ${exec(contentQuery.result)}")
+
+  println(messages.map(_.id * 1000L).result.statements)
+
+  val containsBay = for {
+    m <- messages
+    if m.content like "%bay%"
+  } yield m
+  val bayMentioned: FixedSqlAction[Boolean, _root_.slick.driver.H2Driver.api.NoStream, Read] = containsBay.exists.result
+  /**
+    * select exists(
+    *   select "sender", "content", "id"
+    *   from "message"
+    *   where "content" like '%bay%'
+    * )
+    */
+  println(bayMentioned.statements.mkString)
 }
