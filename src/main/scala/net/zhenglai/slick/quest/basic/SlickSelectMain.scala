@@ -40,6 +40,16 @@ object SlickSelectMain extends App {
     def * = (sender, content, id) <> (Message.tupled, Message.unapply)
   }
 
+  case class Person(id: Long, nickname: Option[String])
+
+  final class PersonTable(tag: Tag) extends Table[Person](tag, "person") {
+    def id = column[Long]("id", O.PrimaryKey, O.AutoInc)
+
+    def nickname = column[Option[String]]("nickname", O.Length(100))
+
+    override def * = (id, nickname) <> (Person.tupled, Person.unapply)
+  }
+
   // Base query for querying the message table:
   // select * style query ...
   // todo: why lazy??
@@ -170,19 +180,34 @@ object SlickSelectMain extends App {
   // >
   // <=
   // >=
-  messages.filter(_.sender === "Dave").result.statements
-  messages.filter(_.sender =!= "Dave").result // sql equivalent operator: <>
+  messages.filter(_.sender === Option("Dave")).result.statements // Option only!!, not Some or None
+
+  // use type ascription to the value
+  messages.filter(_.sender =!= (Some("Dave"): Option[String])).result // sql equivalent operator: <>
   messages.filter(_.sender < "HAL")
   messages.filter(m => m.sender >= m.content).result.statements
 
-
-
-
+  // slick can not compare Int to Long
+  // slick can compare A with Option[A] thru Option(...), but not Some(...) or None
 
   // ++ method for string concatenation (SQL's || operator):
   val concat = messages.map(m => m.sender ++ "> " ++ m.content).result
   println(concat.statements.mkString)
   println(exec(concat))
 
+
+  //select "sender", "content", "id" from "message" order by "sender" nulls first limit 10 offset 1
+  println(messages.sortBy(_.sender.nullsFirst).drop(1).take(10).result.statements.mkString)
+
+  // select count(distinct x2) from (select "sender" as x2, "content" as x3 from "message" order by "sender", "content")
+  println(messages.sortBy(m => (m.sender, m.content)).countDistinct.result.statements.mkString)
+
+  // TODO: complete exercises!!
+
+  // TODO: why?
+  println(exec(messages.map(_.content + "!").result))
+
   Thread.sleep(1000)
+
+
 }
