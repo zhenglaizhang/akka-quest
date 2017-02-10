@@ -154,4 +154,14 @@ object SlickSelectMain extends App {
   }
 
   val woww: FixedSqlStreamingAction[Seq[Message], Message, Read] = messages.result
+
+
+
+  // executing actions
+  val mat = db.run(halSays.result) // materialized result
+  val stream = db.stream(halSays.result) // streaming, handling large data set incrementally
+  stream.foreach(println)
+//  println("" + exec(db.stream(messages).result))
+
+  Thread.sleep(1000)
 }
