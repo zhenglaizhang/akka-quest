@@ -1,11 +1,12 @@
 package net.zhenglai.slick.quest.basic
 
-import scala.concurrent.Await
+import scala.concurrent.{ Await, Future }
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import slick.dbio.Effect.Read
 import slick.driver.H2Driver.api._
-import slick.profile.FixedSqlAction
+import slick.profile.{ FixedSqlAction, FixedSqlStreamingAction }
 
 
 object SlickSelectMain extends App {
@@ -133,13 +134,24 @@ object SlickSelectMain extends App {
     m <- messages
     if m.content like "%bay%"
   } yield m
-  val bayMentioned: FixedSqlAction[Boolean, _root_.slick.driver.H2Driver.api.NoStream, Read] = containsBay.exists.result
+  val bayMentioned: FixedSqlAction[Boolean, NoStream, Read] = containsBay.exists.result
   /**
     * select exists(
-    *   select "sender", "content", "id"
-    *   from "message"
-    *   where "content" like '%bay%'
+    * select "sender", "content", "id"
+    * from "message"
+    * where "content" like '%bay%'
     * )
     */
   println(bayMentioned.statements.mkString)
+
+  Future {
+    println("1")
+    Thread.sleep(3000)
+    3
+  } map {
+    println("2")
+    println(_)
+  }
+
+  val woww: FixedSqlStreamingAction[Seq[Message], Message, Read] = messages.result
 }
