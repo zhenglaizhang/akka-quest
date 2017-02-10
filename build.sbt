@@ -44,7 +44,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-stream-kafka" % "0.13"
 )
 
-
 // LevelDB based plugin
 libraryDependencies ++= Seq(
   "org.iq80.leveldb" % "leveldb" % "0.7",
@@ -53,7 +52,7 @@ libraryDependencies ++= Seq(
 
 libraryDependencies ++= Seq(
   "com.typesafe.slick" %% "slick" % "3.1.1",
-  "com.h2database" % "h2" % "1.4.185",
+  "com.h2database" % "h2" % "1.4.185", // H2 driver
   // TODO: MySQL or PostgreSQL drivers
   "ch.qos.logback" % "logback-classic" % "1.1.2"
 )
