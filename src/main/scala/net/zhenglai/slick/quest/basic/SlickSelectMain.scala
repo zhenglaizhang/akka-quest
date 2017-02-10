@@ -205,6 +205,7 @@ object SlickSelectMain extends App {
   // TODO: complete exercises!!
 
   // TODO: why?
+  println(exec(messages.map(_.content ++ "!").result))
   println(exec(messages.map(_.content + "!").result))
 
   Thread.sleep(1000)
