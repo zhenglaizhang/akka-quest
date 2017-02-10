@@ -156,12 +156,24 @@ object SlickSelectMain extends App {
   val woww: FixedSqlStreamingAction[Seq[Message], Message, Read] = messages.result
 
 
-
   // executing actions
-  val mat = db.run(halSays.result) // materialized result
+  val mat = db.run(halSays.result)
+  // materialized result
   val stream = db.stream(halSays.result) // streaming, handling large data set incrementally
   stream.foreach(println)
 //  println("" + exec(db.stream(messages).result))
+
+  // Rep comparision methods: operand types: A or Option[A]
+  // ===
+  // =!=
+  // <
+  // >
+  // <=
+  // >=
+  messages.filter(_.sender === "Dave").result.statements
+  messages.filter(_.sender =!= "Dave").result // sql equivalent operator: <>
+  messages.filter(_.sender < "HAL")
+  messages.filter(m => m.sender >= m.content).result.statements
 
   Thread.sleep(1000)
 }
