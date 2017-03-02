@@ -6,7 +6,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import slick.dbio.Effect.Read
 import slick.driver.H2Driver.api._
-import slick.profile.{ FixedSqlAction, FixedSqlStreamingAction }
+import slick.profile.FixedSqlStreamingAction
 
 
 object SlickSelectMain extends App {
